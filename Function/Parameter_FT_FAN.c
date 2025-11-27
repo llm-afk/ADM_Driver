@@ -73,7 +73,7 @@ unsigned int MidAllowUdcLimit     =  155;
 unsigned int DeadTimeInternal     =  ((long)DEAD_TIME * DSP_CLOCK) / 100;               // 死区时间
 unsigned int DeadTimeCompInternal =  ((long)DEAD_COMPENATION_TIME * DSP_CLOCK) / 100;   // 死区补偿时间
 
-#define HARDWARE_OVER_CUR            ((long)MAX_PEAK_CUR_3_3V * 0.95) //! 硬件比较器的过流阈值，根据硬件设计决定
+#define HARDWARE_OVER_CUR            1800 //! 硬件比较器的过流阈值，根据硬件设计决定
 #define HARDWARE_CBC_CUR             7000                                // CBC过流比较值, 8.00A 逐波限流实际没有用到
 unsigned int OverCurPointInternal =  ((long)HARDWARE_OVER_CUR << 9) / MAX_PEAK_CUR_3_3V + 512;   // 硬件过流比较值
 unsigned int CBCCurPointInternal  =  ((long)HARDWARE_CBC_CUR  << 9) / MAX_PEAK_CUR_3_3V + 512;   // CBC过流比较值
@@ -89,7 +89,7 @@ unsigned int LOWER_LIMIT_FREQ   =  0;
 unsigned int PMSM_LD            =  270;//250;//30;//150;//432;          // 37uH
 unsigned int PMSM_LQ            =  326;//260;//33;//170;//464;          // 50uH
 unsigned int PMSM_RS            =  269;//150;//25;//50;//251;          // 11mohm
-unsigned int PMS_L_R_UNIT       =  0;           //
+unsigned int PMS_L_R_UNIT       =  0;    
 #ifdef KE_WIDE_RANGE
 unsigned int PMSM_KE            =  80;//22;//40;//60;          // Ke = 43
 #else
@@ -153,7 +153,7 @@ unsigned int DC_CONTROL_KI          = 5;
 unsigned int DC_BRAKE_CUR           = 1500;
 
 //--------------------- 电流限制百分比参数-------------/
-unsigned int TORQUE_CUR_LIMIT       = 120; //! 是用来设置软件层面限制电机输出扭矩的，实际的硬件过流点是通过HARDWARE_OVER_CUR这个设置
+unsigned int TORQUE_CUR_LIMIT       = 100; //! 是用来设置软件层面限制电机输出扭矩的，实际的硬件过流点是通过HARDWARE_OVER_CUR这个设置
                                            
 //--------------------- 弱磁参数----------------------/
 unsigned int FILED_WEEKING_MODE     = 2;       // FE-00, 0 ~ 2

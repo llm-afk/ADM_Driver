@@ -10,8 +10,6 @@ extern "C" {
 #include "Parameter.h"
 #include "SubPrgInclude.h"
 
-#define Jump_Boot        (void  (*)(void)) 0x3F7FF6    //0x3F7FF6是Boot程序的入口地址
-
 #define ERROR_NONE                0      // 0   -- 无
 //#define ERROR_OL_INVERTER         10     // 10 -- 变频器过载
 #define ERROR_OC_HARDWARE         12     // 12  -- 硬件电流

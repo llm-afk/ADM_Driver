@@ -1,0 +1,12 @@
+{
+    "files.associations": {
+        "flash_adp32f03x_api_config.h": "c",
+        "flash_adp32f03x_api_library.h": "c",
+        "runsrc.h": "c",
+        "main.h": "c",
+        "flash_eeprom.h": "c",
+        "maininclude.h": "c",
+        "mm.h": "c",
+        "string.h": "c"
+    }
+}

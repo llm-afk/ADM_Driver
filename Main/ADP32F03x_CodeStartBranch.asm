@@ -1,6 +1,7 @@
 ;//###########################################################################
 * 该文件是DSP程序的入口文件，C语言编程的时候，该文件能够执行MAIN函数前的操作
 ;//###########################################################################
+
     .ref 	_c_int00
     .global code_start
 	.global _MovePrgFrFlashToRam
@@ -14,9 +15,7 @@
 code_start:
     LB main_init       ;Branch User Code:One instruction only
 
-***********************************************************************
-* 在这里把所有的RAM区域初始化为0
-***********************************************************************
+
 	.text
 main_init:
     SETC 	OBJMODE        		;Set OBJMODE for 28x object code
@@ -35,17 +34,14 @@ main_init:
 	MOVL 	XAR4,	#(400H-1)
 	RPT		@AR4
 	|| MOV	*XAR5++,	ACC
-
-	MOVL 	XAR5,	#8000H		;Clear L0, L2, L3
-	MOVL 	XAR4,	#(1000H-1)
-	RPT		@AR4
-	|| MOV	*XAR5++,	ACC
 	
-	MOVL 	XAR5,	#9000H		;Clear L1
+	MOVL 	XAR5,	#8000H		;Clear L0 and half of H0
 	MOVL 	XAR4,	#(3000H-1)
 	RPT		@AR4
 	|| MOV	*XAR5++,	ACC
- 
+
+
+
 	LB _c_int00					;此处跳转到C语言的main函数处
 
 ***********************************************************************

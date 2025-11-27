@@ -5,36 +5,35 @@
 #include "AngleSensor.h"
 #include "stimer.h"
 
-
 stimer_t stimer_main; // 主函数用软定时器模块
 
 void main(void)
 {
-   	InitSysCtrl();						// Step 1. Initialize System Control
-   	InitInterrupt();					// Step 2. Initialize Interrupt service program:
-   	InitPeripherals(); 					// Step 3. Initialize all the Device Peripherals:
-   	InitForMotorApp();					// Step 4. User specific code
-   	InitForFunctionApp();
-	EnableDog();
-	SetInterruptEnable();				// Step 5. enable interrupts:
-	EINT; //使能全局中断
-   	ERTM; //使能实时模式
+    InitSysCtrl();                      // Step 1. Initialize System Control
+    InitInterrupt();                    // Step 2. Initialize Interrupt service program:
+    InitPeripherals();                  // Step 3. Initialize all the Device Peripherals:
+    InitForMotorApp();                  // Step 4. User specific code
+    InitForFunctionApp();
+    EnableDog();
+    SetInterruptEnable();               // Step 5. enable interrupts:
+    EINT; //使能全局中断
+    ERTM; //使能实时模式
 
-   	stimer_init(&stimer_main);
-   	stimer_addTask(&stimer_main, 0, 1, 0, KickDog);
-	stimer_addTask(&stimer_main, 1, 1, 0, SystemLeve05msMotor);
-	stimer_addTask(&stimer_main, 2, 1, 0, SystemLeve05msMotor);
-	stimer_addTask(&stimer_main, 3, 1, 0, SystemLeve05msFunction);
-	stimer_addTask(&stimer_main, 4, 4, 0, SystemLeve2msMotor);
-	stimer_addTask(&stimer_main, 5, 4, 2, SystemLeve2msFunction);
+	DisableDog();
 
-  	while(1)			
-   	{
-		stimer_loop(&stimer_main);
-   	}
+    stimer_init(&stimer_main);
+    stimer_addTask(&stimer_main, 0, 1, 0, KickDog);
+    stimer_addTask(&stimer_main, 1, 1, 0, SystemLeve05msMotor);
+    stimer_addTask(&stimer_main, 2, 1, 0, SystemLeve05msMotor);
+    stimer_addTask(&stimer_main, 3, 1, 0, SystemLeve05msFunction);
+    stimer_addTask(&stimer_main, 4, 4, 0, SystemLeve2msMotor);
+    stimer_addTask(&stimer_main, 5, 4, 2, SystemLeve2msFunction);
+
+    while(1)
+    {
+        stimer_loop(&stimer_main);
+    }
 }
-
-Uint32 num = 0;
 
 int16 adc_buffer[200] = {0};
 int16 index = 0;
@@ -52,15 +51,15 @@ extern MT_STRUCT gIMT;
 ****************************************************************/
 interrupt void ZeroOfEPWMISR(void)
 {
-   	EPwm2Regs.ETCLR.bit.INT = 1;
+    EPwm2Regs.ETCLR.bit.INT = 1;
 
-	EINT;
+    EINT;
     AngleCal();
     ADCOverInterrupt();
 
-	adc_buffer[index] = gIMT.T;
-	index++;
-	index%=200;
+    adc_buffer[index] = gIMT.T;
+    index++;
+    index%=200;
 
 
 
@@ -72,8 +71,8 @@ interrupt void ZeroOfEPWMISR(void)
         stimer_heartbeat(&stimer_main); // 2Khz的心跳频率
     }
 
-	DINT;
-   	PieCtrlRegs.PIEACK.all = PIEACK_GROUP3;	// Acknowledge this interrupt
+    DINT;
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP3; // Acknowledge this interrupt
 }
 
 /***************************************************************
@@ -86,8 +85,7 @@ interrupt void ZeroOfEPWMISR(void)
 ****************************************************************/
 interrupt void OneShotTZOfEPWMISR(void)
 {
-    num++;
-	 HardWareErrorDeal();					// 处理硬件故障－电机控制模块处理
-   	 PieCtrlRegs.PIEACK.all = PIEACK_GROUP2;	// Acknowledge this interrupt
+    HardWareErrorDeal();                    // 处理硬件故障－电机控制模块处理
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP2; // Acknowledge this interrupt
 }
 

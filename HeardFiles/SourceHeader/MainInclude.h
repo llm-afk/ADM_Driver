@@ -10,6 +10,7 @@ extern "C" {
 
 #include "Define.h"
 #include "ADP32F03x_Device.h"
+#include "stdint.h"
 
 /************************************************************
 	基本函数定义和引用

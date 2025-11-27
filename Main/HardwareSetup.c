@@ -90,15 +90,9 @@ void InitInterrupt()
 
    EALLOW;  						//设置用户服务程序
 
-   //PieVectTable.ADCINT1     = &EndOfADCISR;		    //ADC结束中断
    PieVectTable.EPWM2_TZINT = &OneShotTZOfEPWMISR;	//过流中断
    PieVectTable.EPWM2_INT 	= &ZeroOfEPWMISR;		//下溢中断
 
-#ifndef LIN_CONTROL_MODE
-   PieVectTable.SCIRXINTA 	= &SCI_RXD_isr; 		//通讯接收中断
-   PieVectTable.SCITXINTA 	= &SCI_TXD_isr; 		//通讯发送中断
-#endif
-   PieVectTable.LIN0INTA    = &LINA_LEVEL_isr;
    EDIS;
 }
 
@@ -107,17 +101,14 @@ void InitInterrupt()
 ************************************************************/
 void SetInterruptEnable()
 {
-   IER |= (M_INT1 | M_INT2 | M_INT3 | M_INT5 | M_INT6);	//  Enable interrupts:
-   IER |= M_INT9;
+   // 只使能中断组2和3（EPWM2_TZ和EPWM2_INT）
+   IER |= (M_INT2 | M_INT3);
 
-   PieCtrlRegs.PIEIER1.bit.INTx1 = 1;           //  ADC1INT
-   PieCtrlRegs.PIEIER2.bit.INTx2 = 1;           // 	EPWM1_TZ
-   PieCtrlRegs.PIEIER3.bit.INTx2 = 1;           // 	EPWM1_INT
+   // EPWM2_TZ中断（过流保护中断）
+   PieCtrlRegs.PIEIER2.bit.INTx2 = 1;           // EPWM2_TZINT -> OneShotTZOfEPWMISR
 
-   // Enable SCIRX, SCITX interrupt...
-   PieCtrlRegs.PIEIER9.bit.INTx1 = 1;     		// PIE Group 9, INT1
-   PieCtrlRegs.PIEIER9.bit.INTx2 = 1;     		// PIE Group 9, INT2
-   PieCtrlRegs.PIEIER9.bit.INTx3 = 1;
+   // EPWM2_INT中断（下溢中断，FOC算法核心）
+   PieCtrlRegs.PIEIER3.bit.INTx2 = 1;           // EPWM2_INT -> ZeroOfEPWMISR
 
 }
 
