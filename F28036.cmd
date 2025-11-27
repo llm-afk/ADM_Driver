@@ -20,7 +20,7 @@ PAGE 0 :
 PAGE 1 :                                          
    RAMM0       : origin = 0x000100, length = 0x000300   
    RAMM1       : origin = 0x000400, length = 0x000400    
-   RAML0       : origin = 0x009000, length = 0x001000  
+   RAML0       : origin = 0x009000, length = 0x001000
    RAMH0       : origin = 0x00A000, length = 0x002000
 }
 
@@ -39,9 +39,9 @@ SECTIONS
 		-lADP32F036_027_Flash_API_ZONE.lib(.text)
    }LOAD = FLASHA, RUN = RAMPRG, PAGE = 0, TABLE(_prginRAM)
 
-   .stack              : > RAMM1       PAGE = 1 
-   .esysmem            : > RAML0       PAGE = 1 
-   .ebss               : > RAML0|RAMH0 PAGE = 1 
+   .stack              : > RAMM1       PAGE = 1
+   .esysmem            : > RAML0       PAGE = 1
+   .ebss               : >> RAML0|RAMH0 PAGE = 1
 
    .econst             : > FLASHA      PAGE = 0 
    .switch             : > FLASHA      PAGE = 0

@@ -24,7 +24,7 @@ main_init:
     MOV 	@7029h, #0068h  	;Set WDDIS bit in WDCR to disable WD
     EDIS                		;Disable EALLOW protected register access
 
-	MOV		ACC,	#00H	
+	MOV		ACC,	#00H
 	MOVL 	XAR5,	#0000H		;Clear M0
 	MOVL 	XAR4,	#(400H-1)
 	RPT		@AR4

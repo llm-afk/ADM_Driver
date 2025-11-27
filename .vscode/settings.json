@@ -8,6 +8,11 @@
         "maininclude.h": "c",
         "mm.h": "c",
         "string.h": "c",
-        "motorinclude.h": "c"
+        "motorinclude.h": "c",
+        "cmath": "c",
+        "limits": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "anglesensor.h": "c"
     }
 }
