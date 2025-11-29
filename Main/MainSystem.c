@@ -8,7 +8,11 @@
 
 stimer_t stimer_main; // 主函数用软定时器模块
 
-
+extern MT_STRUCT gIMT;
+extern UVW_STRUCT gIUVW;
+extern UVW_STRUCT gIUVW;
+int16_t current_buffer[2000] = {0};
+int16_t current_buffer_pre[2000] = {0};
 
 void main(void)
 {
@@ -56,6 +60,13 @@ interrupt void ZeroOfEPWMISR(void)
     EINT;
     AngleCal();
     ADCOverInterrupt();
+
+    static uint16_t index = 0;
+    current_buffer[index] = gIUVW.U;
+    //current_buffer[index] = current_buffer_pre[index]*0.5 + gIMT.T * 0.5;
+    //current_buffer_pre[index] = current_buffer[index];
+    index++;
+    index%=2000;
 
     // 向stimer模块提供心跳
     static Uint16 stimer_main_cnt = 0;

@@ -56,7 +56,7 @@ MOTOR_RATED_CUR = 1000£¬TORQUE_CUR_LIMIT = 150 À´ÔÚÈí¼þ²ãÃæÏÞÖÆµçÁ÷»·µÄÊä³ö¡£Í¬Ê
 // ¿ØÖÆ°å²ÎÊýÉèÖÃ
 ///////////////////////////////////////////////////////////////////////////////////////
 unsigned int MAX_DC_VOL_3_3V        =  480;        //! 0.1vdc Ä¸ÏßµçÑ¹²É¼¯µÄ×î´óÁ¿³Ì ¸ù¾ÝÊµ¼ÊµÄÓ²¼þµçÂ·¾ö¶¨3VºÍ16±¶
-#define  MAX_PEAK_CUR_3_3V             1875        //! 0.01A // µçÁ÷²É¼¯µÄ×î´óÁ¿³Ì£¬ÓÉÔË·ÅÔöÒæºÍ²ÉÑùµç×è×èÖµ¹²Í¬¾ö¶¨ ¡À20A¾ÍÌî2000 
+#define  MAX_PEAK_CUR_3_3V             4687        //! 0.01A // µçÁ÷²É¼¯µÄ×î´óÁ¿³Ì£¬ÓÉÔË·ÅÔöÒæºÍ²ÉÑùµç×è×èÖµ¹²Í¬¾ö¶¨ ¡À20A¾ÍÌî2000
 unsigned long MAX_PEAK_CUR_3_3V_2   =  MAX_PEAK_CUR_3_3V;
 unsigned long MAX_PEAK_CUR_3_3V_410 =  ((long)MAX_PEAK_CUR_3_3V << 12) / 10;
 
@@ -73,7 +73,7 @@ unsigned int MidAllowUdcLimit     =  155;
 unsigned int DeadTimeInternal     =  ((long)DEAD_TIME * DSP_CLOCK) / 100;               // ËÀÇøÊ±¼ä
 unsigned int DeadTimeCompInternal =  ((long)DEAD_COMPENATION_TIME * DSP_CLOCK) / 100;   // ËÀÇø²¹³¥Ê±¼ä
 
-#define HARDWARE_OVER_CUR            1500 //! Ó²¼þ±È½ÏÆ÷µÄ¹ýÁ÷ãÐÖµ£¬¸ù¾ÝÓ²¼þÉè¼Æ¾ö¶¨
+#define HARDWARE_OVER_CUR            (MAX_PEAK_CUR_3_3V *0.99f) //! Ó²¼þ±È½ÏÆ÷µÄ¹ýÁ÷ãÐÖµ£¬¸ù¾ÝÓ²¼þÉè¼Æ¾ö¶¨
 #define HARDWARE_CBC_CUR             7000                                // CBC¹ýÁ÷±È½ÏÖµ, 8.00A Öð²¨ÏÞÁ÷Êµ¼ÊÃ»ÓÐÓÃµ½
 unsigned int OverCurPointInternal =  ((long)HARDWARE_OVER_CUR << 9) / MAX_PEAK_CUR_3_3V + 512;   // Ó²¼þ¹ýÁ÷±È½ÏÖµ
 unsigned int CBCCurPointInternal  =  ((long)HARDWARE_CBC_CUR  << 9) / MAX_PEAK_CUR_3_3V + 512;   // CBC¹ýÁ÷±È½ÏÖµ
@@ -82,8 +82,8 @@ unsigned int CBCCurPointInternal  =  ((long)HARDWARE_CBC_CUR  << 9) / MAX_PEAK_C
 // µç»ú²ÎÊýÉèÖÃ
 ///////////////////////////////////////////////////////////////////////////////////////
 unsigned int MOTOR_RATED_POWER  =  2000;    //0.1WÎªµ¥Î»
-unsigned int MOTOR_RATED_VOL    =  17;  //! ¶î¶¨µçÑ¹ Ä¸ÏßµçÑ¹/sqrt2
-unsigned int MOTOR_RATED_CUR    =  120; //! 20AµÄ¶î¶¨µçÁ÷£¬ÕâÀïÊÇ¶î¶¨
+unsigned int MOTOR_RATED_VOL    =  23;  //! ¶î¶¨µçÑ¹ Ä¸ÏßµçÑ¹/sqrt2
+unsigned int MOTOR_RATED_CUR    =  200; //! 20AµÄ¶î¶¨µçÁ÷£¬ÕâÀïÊÇ¶î¶¨
 unsigned int LOWER_LIMIT_FREQ   =  0;
 
 unsigned int PMSM_LD            =  270;//250;//30;//150;//432;          // 37uH
@@ -131,9 +131,9 @@ unsigned int HIGH_SPEED_KP_GAIN     =  10;
 ///////////////////////////////////////////////////////////////////////////////////////
 // µçÁ÷»·»·²ÎÊýÉèÖÃ
 ///////////////////////////////////////////////////////////////////////////////////////
-unsigned int D_CUR_KI               =  30; // !
+unsigned int D_CUR_KI               =  40; // !
 unsigned int D_CUR_KP               =  30; // !
-unsigned int Q_CUR_KI               =  30; // !
+unsigned int Q_CUR_KI               =  40; // !
 unsigned int Q_CUR_KP               =  30; // !
 
 ///////////////////////////////////////////////////////////////////////////////////////
