@@ -127,9 +127,9 @@ static inline uint16_t cal_temp_item_checksum_from_key(uint16_t key)
 }
 
 /**
- * @brief 计算 temp 中的指定key索引的参数的checksum
+ * @brief 获取 temp 中的指定key索引的参数的checksum
  * @param key 指定参数的key
- * @return 计算的checksum
+ * @return 返回的checksum
  */
 static inline uint16_t get_temp_item_checksum_from_key(uint16_t key)
 {

@@ -21,7 +21,6 @@ typedef struct{
     volatile uint32_t tick_counter; 
     volatile uint32_t tick_counter_pre; 
     task_t task[TASK_NUM_MAX];
-    float version;
 }stimer_t;
 
 void stimer_init(stimer_t *stimer);

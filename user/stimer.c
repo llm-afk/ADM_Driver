@@ -7,7 +7,6 @@
 void stimer_init(stimer_t *stimer)
 {
     memset(stimer, 0, sizeof(stimer_t));
-    stimer->version =1.0f; 
 }
 
 /**

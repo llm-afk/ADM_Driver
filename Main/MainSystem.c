@@ -10,9 +10,7 @@ stimer_t stimer_main; // 主函数用软定时器模块
 
 extern MT_STRUCT gIMT;
 extern UVW_STRUCT gIUVW;
-extern UVW_STRUCT gIUVW;
-int16_t current_buffer[2000] = {0};
-int16_t current_buffer_pre[2000] = {0};
+int16_t debug_buffer[2000] = {0};
 
 void main(void)
 {
@@ -43,6 +41,8 @@ void main(void)
     }
 }
 
+
+
 /***************************************************************
     取代EPWM的ADC 中断，使用下溢中断
     1：清除中断标志，可以使下一个中断进来
@@ -62,9 +62,7 @@ interrupt void ZeroOfEPWMISR(void)
     ADCOverInterrupt();
 
     static uint16_t index = 0;
-    current_buffer[index] = gIUVW.U;
-    //current_buffer[index] = current_buffer_pre[index]*0.5 + gIMT.T * 0.5;
-    //current_buffer_pre[index] = current_buffer[index];
+    debug_buffer[index] = gIMT.M;
     index++;
     index%=2000;
 

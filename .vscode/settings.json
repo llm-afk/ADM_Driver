@@ -13,6 +13,14 @@
         "limits": "c",
         "tuple": "c",
         "type_traits": "c",
-        "anglesensor.h": "c"
+        "anglesensor.h": "c",
+        "parameter.h": "c",
+        "charconv": "c",
+        "optional": "c",
+        "ranges": "c",
+        "system_error": "c",
+        "array": "c",
+        "functional": "c",
+        "utility": "c"
     }
 }

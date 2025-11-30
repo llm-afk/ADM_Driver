@@ -71,20 +71,35 @@ Uint16 SPITransfer(Uint16 data)
     return SpiaRegs.SPIRXBUF;
 }
 
+
+extern uint16_t encoder_calibration_state;
+
+/**
+ * @brief 获取编码器的原始角度，归一化到u16
+ */
+#pragma CODE_SECTION(AngleCal,"ramfuncs");
+uint16_t get_raw_angle_u16(void)
+{
+    uint16_t h_data = SPITransfer(0x8300); // 获取主编码器03寄存器的高8位值
+    uint16_t l_data = SPITransfer(0x8400); // 获取主编码器04寄存器的低6位值
+    return ((((h_data & 0x00FF) << 8) | (l_data & 0x00FF)) >> 2) << 2;
+}
+
+
+extern uint16_t encoder_ele_calib_val;
 /**
  * @brief 更新电角度
  */
 #pragma CODE_SECTION(AngleCal,"ramfuncs");
 void AngleCal(void)
 {
-    Uint16 h_data = SPITransfer(0x8300); // 获取主编码器03寄存器的高8位值
-    Uint16 l_data = SPITransfer(0x8400); // 获取主编码器04寄存器的低6位值
-    Uint16 rawAngle = (((h_data & 0x00FF) << 8) | (l_data & 0x00FF)) >> 2; // 计算14位的原始主编码器的数据
-    
-    Degree.MachDegree = rawAngle; // 这里之后要做原始编码器数据的非线性化校准 14bit
-    
-    Degree.ElecDegree = (((Degree.MachDegree) & 0x7FF) - Degree.InitElecDegree) << 5; // 机械角度转换电角度(%2048) + 电角度对齐 + 将电角度数据从11bit有效值归一化到16bit
-    //Degree.ElecDegree = 0;
+    uint16_t raw_angle = get_raw_angle_u16(); //  获取编码器的归一化到u16的原始角度
+
+    Degree.MachDegree = raw_angle; // 后续在这里做非线性的校准
+
+    //if(encoder_calibration_state == 0) // 非校准时
+    //Degree.ElecDegree = ((Degree.MachDegree & 0x1FFF) << 3) - encoder_ele_calib_val; // 机械角度(归一化到u16)根据8极对也就是%8192得到电角度(u13)左移3得到电角度(u16)再进行u16的零点校准
+    Degree.ElecDegree = 0;
     // 由于ElecDegree是u16的所以会自动溢出处理数据回绕的现象
 }
 
@@ -92,7 +107,7 @@ void InitAngleSensor(void)
 {
     Degree.MrSin_Calib = -3;//-20;//基准值
     Degree.MrCos_Calib = -6;////-50;//基准值
-    Degree.InitElecDegree = 999;//传感器校准电角度
+    Degree.InitElecDegree = 32224;//传感器校准电角度u16
     Degree.MotorPairs = 8;
     Degree.MachDegree = 0;
     Degree.ElecDegree = 0;
