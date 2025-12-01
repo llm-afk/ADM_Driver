@@ -62,7 +62,7 @@ interrupt void ZeroOfEPWMISR(void)
     ADCOverInterrupt();
 
     static uint16_t index = 0;
-    debug_buffer[index] = gIMT.M;
+    debug_buffer[index] = gIUVW.U;
     index++;
     index%=2000;
 

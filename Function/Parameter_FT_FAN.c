@@ -60,9 +60,9 @@ unsigned int MAX_DC_VOL_3_3V        =  480;        //! 0.1vdc 母线电压采集的最大
 unsigned long MAX_PEAK_CUR_3_3V_2   =  MAX_PEAK_CUR_3_3V;
 unsigned long MAX_PEAK_CUR_3_3V_410 =  ((long)MAX_PEAK_CUR_3_3V << 12) / 10;
 
-unsigned int OVER_DC_VOL_POINT    =  360;         //! 0.1vdc // 过压保护阈值 切断输出
-unsigned int OVER_DC_VOL_LIMIT    =  350;         //! 0.1vdc // 过压控制限制点（非立即保护）降低电流
-unsigned int UNDER_DC_VOL_POINT   =  170;         //! 0.1vdc // 欠压保护阈值 
+unsigned int OVER_DC_VOL_POINT    =  360;         //! 0.1vdc // 母线电压过压保护阈值 切断输出
+unsigned int OVER_DC_VOL_LIMIT    =  350;         //! 0.1vdc // 母线电压过压控制限制点（非立即保护）降低电流
+unsigned int UNDER_DC_VOL_POINT   =  170;         //! 0.1vdc // 母线电压欠压保护阈值 
 
 unsigned int  OVER_DC_VOL_KP      =  800;
 unsigned int MaxAllowUdcLimit     =  170;
@@ -82,7 +82,7 @@ unsigned int CBCCurPointInternal  =  ((long)HARDWARE_CBC_CUR  << 9) / MAX_PEAK_C
 // 电机参数设置
 ///////////////////////////////////////////////////////////////////////////////////////
 unsigned int MOTOR_RATED_POWER  =  2000;    //0.1W为单位
-unsigned int MOTOR_RATED_VOL    =  23;  //! 额定电压 母线电压/sqrt2
+unsigned int MOTOR_RATED_VOL    =  17;  //! 相电压的有效值，输入实际的母线电压/1.414
 unsigned int MOTOR_RATED_CUR    =  200; //! 20A的额定电流，这里是额定
 unsigned int LOWER_LIMIT_FREQ   =  0;
 

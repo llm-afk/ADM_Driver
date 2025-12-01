@@ -3,6 +3,7 @@
 #include "MotorInclude.h"
 #include "Record.h"
 #include "AngleSensor.h"
+#include "encoder.h"
 
 Uint16 SpiSendData[11];
 DEGREE_STRUCT Degree;
@@ -86,20 +87,18 @@ uint16_t get_raw_angle_u16(void)
 }
 
 
-extern uint16_t encoder_ele_calib_val;
 /**
  * @brief 更新电角度
  */
 #pragma CODE_SECTION(AngleCal,"ramfuncs");
 void AngleCal(void)
 {
-    uint16_t raw_angle = get_raw_angle_u16(); //  获取编码器的归一化到u16的原始角度
+    encoder.main_encoder_raw_val = get_raw_angle_u16(); //  获取编码器的归一化到u16的原始角度
 
-    Degree.MachDegree = raw_angle; // 后续在这里做非线性的校准
+    encoder.main_encoder_lined_val = encoder.main_encoder_raw_val; // 后续在这里做非线性的校准
 
-    //if(encoder_calibration_state == 0) // 非校准时
-    //Degree.ElecDegree = ((Degree.MachDegree & 0x1FFF) << 3) - encoder_ele_calib_val; // 机械角度(归一化到u16)根据8极对也就是%8192得到电角度(u13)左移3得到电角度(u16)再进行u16的零点校准
-    Degree.ElecDegree = 0;
+    Degree.ElecDegree = ((encoder.main_encoder_lined_val & 0x1FFF) << 3) - encoder.elec_degree_calib_val; // 机械角度(归一化到u16)根据8极对也就是%8192得到电角度(u13)左移3得到电角度(u16)再进行u16的零点校准
+    //Degree.ElecDegree = 0;
     // 由于ElecDegree是u16的所以会自动溢出处理数据回绕的现象
 }
 

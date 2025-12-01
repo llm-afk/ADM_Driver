@@ -21,6 +21,8 @@
         "system_error": "c",
         "array": "c",
         "functional": "c",
-        "utility": "c"
+        "utility": "c",
+        "encoder.h": "c",
+        "spicomm.h": "c"
     }
 }
