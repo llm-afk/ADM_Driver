@@ -18,6 +18,7 @@
 #include "SPIcomm.h"
 #include "PreDriver.h"
 #include "Parameter.h"
+#include "canfd.h"
 
 #define Device_cal (void   (*)(void))0x3D7C80
 
@@ -92,6 +93,7 @@ void InitInterrupt()
 
    PieVectTable.EPWM2_TZINT = &OneShotTZOfEPWMISR;	//过流中断
    PieVectTable.EPWM2_INT 	= &ZeroOfEPWMISR;		//下溢中断
+   PieVectTable.CANFD_INT1  = &canfd_IsrHander1;    //canfd总中断
 
    EDIS;
 }
@@ -102,13 +104,15 @@ void InitInterrupt()
 void SetInterruptEnable()
 {
    // 只使能中断组2和3（EPWM2_TZ和EPWM2_INT）
-   IER |= (M_INT2 | M_INT3);
+   IER |= (M_INT2 | M_INT3 | M_INT4);
 
    // EPWM2_TZ中断（过流保护中断）
    PieCtrlRegs.PIEIER2.bit.INTx2 = 1;           // EPWM2_TZINT -> OneShotTZOfEPWMISR
 
    // EPWM2_INT中断（下溢中断，FOC算法核心）
    PieCtrlRegs.PIEIER3.bit.INTx2 = 1;           // EPWM2_INT -> ZeroOfEPWMISR
+
+   PieCtrlRegs.PIEIER4.bit.INTx2 = 1;           //CanFd
 
 }
 
@@ -132,6 +136,7 @@ void InitPeripherals(void)
    	PreDriverInit();
    	DriverClaerFault();
 #endif
+    canfd_init();
    	InitSpi();
    	// Set up SCI function...
    	// SCI_Setup();
@@ -361,6 +366,7 @@ void InitPeripheralClocks(void)
    SysCtrlRegs.PCLKCR1.all = 0x011F;
 
    SysCtrlRegs.PCLKCR3.all = 0x6704;
+   SysCtrlRegs.PCLKCR0.bit.rsvd5       = 1;   // CANFD
    EDIS;
 }
 

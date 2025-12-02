@@ -23,6 +23,13 @@
         "functional": "c",
         "utility": "c",
         "encoder.h": "c",
-        "spicomm.h": "c"
+        "spicomm.h": "c",
+        "adp32f03x_canfd.h": "c",
+        "canfd.h": "c",
+        "ringbuffer.h": "c",
+        "stdlib.h": "c",
+        "adp32f03x_cputimers.h": "c",
+        "cpu_usage.h": "c",
+        "stdint.h": "c"
     }
 }

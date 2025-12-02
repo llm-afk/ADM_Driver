@@ -71,11 +71,13 @@ MEMORY
 
    LINA        : origin = 0x006C00, length = 0x000080     /* LIN-A registers */
 
+   CANFD	      : origin = 0x006C80, length = 0x000300
+
    GPIOCTRL    : origin = 0x006F80, length = 0x000040     /* GPIO control registers */
    GPIODAT     : origin = 0x006FC0, length = 0x000020     /* GPIO data registers */
    GPIOINT     : origin = 0x006FE0, length = 0x000020     /* GPIO interrupt/LPM registers */
 
-   SYSTEM      : origin = 0x007010, length = 0x000020     /* System control registers */
+   SYSTEM      : origin = 0x007010, length = 0x00001B     /* System control registers */
 
    SPIA        : origin = 0x007040, length = 0x000010     /* SPI-A registers */
    SPIB        : origin = 0x007740, length = 0x000010     /* SPI-B registers */
@@ -88,6 +90,7 @@ MEMORY
    XINTRUPT    : origin = 0x007070, length = 0x000010     /* external interrupt registers */
 
    ADC         : origin = 0x007100, length = 0x000080     /* ADC registers */
+   ANALOG	   : origin = 0x00702B, length = 0x000005	    /* ANALOG registers */
 
    I2CA        : origin = 0x007900, length = 0x000040     /* I2C-A registers */
 
@@ -133,10 +136,12 @@ SECTIONS
    ECanaMOTORegsFile : > ECANA_MOTO,  PAGE = 1
    ECap1RegsFile     : > ECAP1,       PAGE = 1
    EQep1RegsFile     : > EQEP1,       PAGE = 1
-   LinaRegsFile	     : > LINA,        PAGE = 1
+   LinaRegsFile	   : > LINA,        PAGE = 1
+   CanfdRegsFile     : > CANFD,       PAGE = 1
    GpioCtrlRegsFile  : > GPIOCTRL,    PAGE = 1
    GpioDataRegsFile  : > GPIODAT,     PAGE = 1
    GpioIntRegsFile   : > GPIOINT,     PAGE = 1
+   AnalogRegsFile    : > ANALOG,      PAGE = 1
 
 /*** Peripheral Frame 2 Register Structures ***/
    SysCtrlRegsFile   : > SYSTEM,      PAGE = 1

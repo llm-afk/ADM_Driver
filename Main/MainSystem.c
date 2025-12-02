@@ -5,6 +5,7 @@
 #include "AngleSensor.h"
 #include "stimer.h"
 #include "flash_eeprom.h"
+#include "canfd.h"
 
 stimer_t stimer_main; // 主函数用软定时器模块
 
@@ -38,10 +39,9 @@ void main(void)
     while(1)
     {
         stimer_loop(&stimer_main);
+        //COM_CAN_loop();
     }
 }
-
-
 
 /***************************************************************
     取代EPWM的ADC 中断，使用下溢中断
@@ -53,14 +53,18 @@ void main(void)
 
     2&4 是可以选择项目，供设计师参考！！！
 ****************************************************************/
+#pragma CODE_SECTION(ZeroOfEPWMISR, "ramfuncs");
 interrupt void ZeroOfEPWMISR(void)
 {
+    // 电流环计算
     EPwm2Regs.ETCLR.bit.INT = 1;
-
     EINT;
     AngleCal();
     ADCOverInterrupt();
+    DINT;
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP3; // Acknowledge this interrupt
 
+    // 记录debug数据
     static uint16_t index = 0;
     debug_buffer[index] = gIUVW.U;
     index++;
@@ -73,9 +77,6 @@ interrupt void ZeroOfEPWMISR(void)
         stimer_main_cnt = 0;
         stimer_heartbeat(&stimer_main); // 2Khz的心跳频率
     }
-
-    DINT;
-    PieCtrlRegs.PIEACK.all = PIEACK_GROUP3; // Acknowledge this interrupt
 }
 
 /***************************************************************
@@ -86,6 +87,7 @@ interrupt void ZeroOfEPWMISR(void)
     逻辑是：先封锁（硬件已经完成，大概200NS），然后进该中断（执行报错，清除标志位等），
     也可以屏蔽此中断，在外面采用查询的方式，不影响保护
 ****************************************************************/
+#pragma CODE_SECTION(OneShotTZOfEPWMISR, "ramfuncs");
 interrupt void OneShotTZOfEPWMISR(void)
 {
     HardWareErrorDeal();                    // 处理硬件故障－电机控制模块处理

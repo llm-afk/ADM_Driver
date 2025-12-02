@@ -1,0 +1,43 @@
+#ifndef CANFD_H
+#define CANFD_H
+
+#include "MainInclude.h"
+#include "ringbuffer.h"
+
+#define CANFD_DLC_TO_LEN(dlc) ( \
+    ((dlc) <  9) ? (dlc) : \
+    ((dlc) == 9) ? 12 : \
+    ((dlc) == 10) ? 16 : \
+    ((dlc) == 11) ? 20 : \
+    ((dlc) == 12) ? 24 : \
+    ((dlc) == 13) ? 32 : \
+    ((dlc) == 14) ? 48 : \
+    /* dlc == 15 */ 64 \
+)
+
+#define CANFD_LEN_TO_DLC(len) \
+(   ((len) <= 8)  ? (len) : \
+    ((len) == 12) ? 9  : \
+    ((len) == 16) ? 10 : \
+    ((len) == 20) ? 11 : \
+    ((len) == 24) ? 12 : \
+    ((len) == 32) ? 13 : \
+    ((len) == 48) ? 14 : \
+    ((len) == 64) ? 15 : \
+    0xFF /* 非法长度 */ )
+
+#define GET_MSG_ID(canid)   (canid & 0x780) // 获取 11bit 中高 4bit 的msg_id
+#define GET_NODE_ID(canid)  (canid & 0x07F) // 获取 11bit 中低 7bit 的node_id
+
+typedef struct {
+    uint16_t id;       // CAN ID：标准11位
+    uint16_t len;      // 数据长度 查表后的实际的数据段字节数
+    uint16_t data[32]; // 数据区：最多64字节，用32个 uint16_t 存储
+} canFrame_t;
+
+
+void canfd_init(void);
+interrupt void canfd_IsrHander1(void);
+void COM_CAN_loop(void);
+
+#endif

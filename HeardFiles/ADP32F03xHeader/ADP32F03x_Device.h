@@ -130,6 +130,8 @@ typedef long double         float64;
 #include <ADP32F03x_SysCtrl.h>            // System Control/Power Modes
 #include <ADP32F03x_XIntrupt.h>           // External Interrupts
 #include <ADP32F03x_PgaOpa.h>             // PGA and OPA Registers
+#include "ADP32F03x_Canfd.h"
+#include "ADP32F03x_Analog.h"
 
 
 #if (DSP32_ADP32F035PN||DSP32_ADP32F034PN||DSP32_ADP32F033PN||DSP32_ADP32F032PN||DSP32_ADP32F031PN||DSP232_ADP32F030PN)

@@ -22,6 +22,14 @@ volatile struct ADC_RESULT_REGS AdcResult;
 
 //----------------------------------------
 #ifdef __cplusplus
+#pragma DATA_SECTION("AnalogRegsFile")
+#else
+#pragma DATA_SECTION(AnalogRegs,"AnalogRegsFile");
+#endif
+volatile struct ANALOG_REGS AnalogRegs;
+
+//----------------------------------------
+#ifdef __cplusplus
 #pragma DATA_SECTION("Comp1RegsFile")
 #else
 #pragma DATA_SECTION(Comp1Regs,"Comp1RegsFile");
@@ -91,6 +99,14 @@ volatile struct CSM_REGS CsmRegs;
 #pragma DATA_SECTION(DevEmuRegs,"DevEmuRegsFile");
 #endif
 volatile struct DEV_EMU_REGS DevEmuRegs;
+
+//----------------------------------------
+#ifdef __cplusplus
+#pragma DATA_SECTION("CanfdRegsFile")
+#else
+#pragma DATA_SECTION(CanfdRegs,"CanfdRegsFile");
+#endif
+volatile struct CANFD_REGS CanfdRegs;
 
 //----------------------------------------
 #ifdef __cplusplus
