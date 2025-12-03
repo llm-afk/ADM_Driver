@@ -30,6 +30,9 @@
         "stdlib.h": "c",
         "adp32f03x_cputimers.h": "c",
         "cpu_usage.h": "c",
-        "stdint.h": "c"
+        "stdint.h": "c",
+        "string": "c",
+        "string_view": "c",
+        "span": "c"
     }
 }

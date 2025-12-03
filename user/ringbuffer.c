@@ -20,6 +20,7 @@ void ringbuffer_init(ringbuffer_t *ringbuffer, uint16_t *buffer, uint32_t size)
  * @param in 待添加进缓冲区的数据缓冲区的指针
  * @param len 待添加进缓冲区的数据缓冲区的长度(Byte)
  */
+#pragma CODE_SECTION(ringbuffer_in, "ramfuncs");
 void ringbuffer_in(ringbuffer_t *ringbuffer, const void *in, uint32_t len)
 {
     uint32_t index = ringbuffer->in & (ringbuffer->size - 1);
@@ -44,6 +45,7 @@ void ringbuffer_in(ringbuffer_t *ringbuffer, const void *in, uint32_t len)
  * @param out 用来接数据的缓冲区指针
  * @param len 要取的数据长度
  */
+#pragma CODE_SECTION(ringbuffer_out, "ramfuncs");
 void ringbuffer_out(ringbuffer_t *ringbuffer, void *out, uint32_t len)
 {
     uint32_t index = ringbuffer->out & (ringbuffer->size - 1);
@@ -87,6 +89,7 @@ uint16_t ringbuffer_peek(ringbuffer_t *ringbuffer)
  * @param ringbuffer 环形缓冲区控制块指针
  * @return 环形缓冲区已使用空间
  */
+#pragma CODE_SECTION(ringbuffer_used, "ramfuncs");
 uint32_t ringbuffer_used(ringbuffer_t *ringbuffer)
 {
     return ringbuffer->in - ringbuffer->out;
@@ -97,6 +100,7 @@ uint32_t ringbuffer_used(ringbuffer_t *ringbuffer)
  * @param ringbuffer 环形缓冲区控制块指针
  * @return 环形缓冲区剩余空间
  */
+#pragma CODE_SECTION(ringbuffer_avail, "ramfuncs");
 uint32_t ringbuffer_avail(ringbuffer_t *ringbuffer)
 {
     return ringbuffer->size - ringbuffer_used(ringbuffer);

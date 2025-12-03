@@ -32,6 +32,7 @@ void main(void)
     stimer_addTask(&stimer_main, 3, 1, 0, SystemLeve05msFunction);
     stimer_addTask(&stimer_main, 4, 4, 0, SystemLeve2msMotor);
     stimer_addTask(&stimer_main, 5, 4, 2, SystemLeve2msFunction);
+    stimer_addTask(&stimer_main, 6, 1, 0, COM_CAN_loop);
 
     eeprom_init();
     load_eeprom_to_ram();
@@ -39,7 +40,6 @@ void main(void)
     while(1)
     {
         stimer_loop(&stimer_main);
-        //COM_CAN_loop();
     }
 }
 
