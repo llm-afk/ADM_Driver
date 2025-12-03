@@ -57,119 +57,56 @@ void canfd_init(void)
 #endif
     EDIS;
 
-    CanfdRegs.CFG_STAT.bit.RESET = 1;
+    CanfdRegs.CFG_STAT.bit.RESET = 1; 
 
-    CanfdRegs.CANCFG.bit.CAN_CLK_SEL = 1;   // 0:sysclk;1:pllclk
+    // clk
+    CanfdRegs.CANCFG.bit.CAN_CLK_SEL = 0;   // 0:sysclk 1:pllclk
 
     // Arbitration Phase：1M
-    CanfdRegs.S_CFG.bit.S_PRESC = 4;
-    CanfdRegs.S_SEG.bit.S_Seg_1 = 13;
-    CanfdRegs.S_SEG.bit.S_Seg_2 = 4;
-    CanfdRegs.S_CFG.bit.S_SJW   = 2;
+    CanfdRegs.S_CFG.bit.S_PRESC = 4;  
+    CanfdRegs.S_SEG.bit.S_Seg_1 = 13; 
+    CanfdRegs.S_SEG.bit.S_Seg_2 = 4;  
+    CanfdRegs.S_CFG.bit.S_SJW   = 2; 
 
     // Data Phase：5M
-    CanfdRegs.F_CFG.bit.F_PRESC = 0;
-    CanfdRegs.F_SEG.bit.F_Seg_1 = 13;
-    CanfdRegs.F_SEG.bit.F_Seg_2 = 4;
-    CanfdRegs.F_CFG.bit.F_SJW   = 1;
+    CanfdRegs.F_CFG.bit.F_PRESC = 0; 
+    CanfdRegs.F_SEG.bit.F_Seg_1 = 13;     
+    CanfdRegs.F_SEG.bit.F_Seg_2 = 4;    
+    CanfdRegs.F_CFG.bit.F_SJW   = 1;     
 
-    CanfdRegs.DELAY_EALCAP.bit.TDCEN = 1;//fifo传输时置1
+    canfd_config_filter_low7_dual(0, 1); // 配置滤波器
+
+    // TDC
+    CanfdRegs.DELAY_EALCAP.bit.TDCEN = 1;
     CanfdRegs.DELAY_EALCAP.bit.SSPOFF = 0;
-    //canfd_config_filter_low7_dual(0, 1);
 
     CanfdRegs.CFG_STAT.bit.RESET = 0;
+    
+    // // 中断配置
+    CanfdRegs.RTINTFE.all = 0;
+    CanfdRegs.RTINTFE.bit.RIE = 1; // 开启接收缓冲区非空中断
 
-    //  TBUF1-15
-    CanfdRegs.TCTRL.bit.TSMODE = 0;
-    CanfdRegs.CFG_STAT.bit.TBSEL = 1;
-    CanfdRegs.CFG_STAT.bit.TPE = 0;         // no transfer to PTB
-    //  CanfdRegs.CFG_STAT.bit.TSSS = 1;
-   // CanfdRegs.RTINTFE.bit.TSIE  = 1;
-
-
-    CanfdRegs.TBUF.RID1.bit.ID = 0;
-    CanfdRegs.TBUF.RID1.bit.ESI = 0;
+    // config
+    CanfdRegs.TCTRL.bit.TSMODE = 0;   // 0 = FIFO mode
+    CanfdRegs.CFG_STAT.bit.TBSEL = 1; // 配置为二级缓冲区
+    CanfdRegs.CFG_STAT.bit.TPE = 0;
 
     CanfdRegs.TBUF.RIDST.bit.IDE = 0;        // 0: standard frame ID; 1: extended frame ID
     CanfdRegs.TBUF.RIDST.bit.RTR = 0;        // 0: data frame; 1: remote frame(for can)
     CanfdRegs.TBUF.RIDST.bit.FDF_EDL = 1;    // 0: can 2.0; 1:can_fd
+    CanfdRegs.TBUF.RIDST.bit.BRS = 1;        // 1：开启发送canfd加速模式
 
-        CanfdRegs.TBUF.RIDST.bit.BRS  = 1;
+    CanfdRegs.RBUF.RIDST.bit.KOER = 0;
 
-
-    CanfdRegs.TBUF.RIDST.bit.KOER = 0;
-
-    //CanfdRegs.RTINTFE.bit.TPIE = 0;         // enable interrupt
-
-        CanfdRegs.TBUF.RIDST.bit.IDE = 0;        // 0: standard frame ID; 1: extended frame ID
-    CanfdRegs.TBUF.RIDST.bit.RTR = 0;        // 0: data frame; 1: remote frame(for can)
-
-    CanfdRegs.TBUF.RIDST.bit.FDF_EDL = 1;    // 0: can 2.0; 1:can_fd
-    CanfdRegs.TBUF.RIDST.bit.BRS = 1;
-
-
-
-    CanfdRegs.RBUF.RID1.bit.ID  = 0;
-    CanfdRegs.RBUF.RID1.bit.ESI = 0;
-
-    CanfdRegs.RBUF.RIDST.bit.IDE     = 0 ;        // 0: standard frame ID; 1: extended frame ID
-    CanfdRegs.RBUF.RIDST.bit.RTR     = 0;        // 0: data frame; 1: remote frame(for can)
+    CanfdRegs.RBUF.RIDST.bit.IDE = 0;        // 0: standard frame ID; 1: extended frame ID
+    CanfdRegs.RBUF.RIDST.bit.RTR = 0;        // 0: data frame; 1: remote frame(for can)
     CanfdRegs.RBUF.RIDST.bit.FDF_EDL = 1;    // 0: can 2.0; 1:can_fd
-    CanfdRegs.RBUF.RIDST.bit.BRS     = 1;        //1 canfd加速
-    CanfdRegs.RBUF.RIDST.bit.KOER    = 0;
+    CanfdRegs.RBUF.RIDST.bit.BRS = 1;        // 1：开启接收canfd加速模式
 
-    // CanfdRegs.CFG_STAT.bit.RESET = 1; 
+    CanfdRegs.RBUF.RIDST.bit.KOER = 0;
 
-    // // clk
-    // CanfdRegs.CANCFG.bit.CAN_CLK_SEL = 0;   // 0:sysclk 1:pllclk
-
-    // // Arbitration Phase：1M
-    // CanfdRegs.S_CFG.bit.S_PRESC = 4;  
-    // CanfdRegs.S_SEG.bit.S_Seg_1 = 13; 
-    // CanfdRegs.S_SEG.bit.S_Seg_2 = 4;  
-    // CanfdRegs.S_CFG.bit.S_SJW   = 2; 
-
-    // // Data Phase：5M
-    // CanfdRegs.F_CFG.bit.F_PRESC = 0; 
-    // CanfdRegs.F_SEG.bit.F_Seg_1 = 13;     
-    // CanfdRegs.F_SEG.bit.F_Seg_2 = 4;    
-    // CanfdRegs.F_CFG.bit.F_SJW   = 1;     
-
-    // // TDC
-    // CanfdRegs.DELAY_EALCAP.bit.TDCEN = 1;
-    // CanfdRegs.DELAY_EALCAP.bit.SSPOFF = 0;
-
-    // CanfdRegs.CFG_STAT.bit.RESET = 0;
-    
-    // // 中断配置
-     CanfdRegs.RTINTFE.all = 0;
-     CanfdRegs.RTINTFE.bit.RIE = 1; // 开启接收缓冲区非空中断
-
-    // // config
-    // CanfdRegs.TCTRL.bit.TSMODE = 0;   // 0 = FIFO mode
-    // CanfdRegs.CFG_STAT.bit.TBSEL = 1; // 配置为二级缓冲区
-    // CanfdRegs.CFG_STAT.bit.TPE = 0;
-    // CanfdRegs.RTINTFE.bit.TSIE  = 1;
-
-    // CanfdRegs.TBUF.RIDST.bit.IDE = 0;        // 0: standard frame ID; 1: extended frame ID
-    // CanfdRegs.TBUF.RIDST.bit.RTR = 0;        // 0: data frame; 1: remote frame(for can)
-    // CanfdRegs.TBUF.RIDST.bit.FDF_EDL = 1;    // 0: can 2.0; 1:can_fd
-    // CanfdRegs.TBUF.RIDST.bit.BRS = 1;        // 1：开启发送canfd加速模式
-
-    // CanfdRegs.RBUF.RIDST.bit.KOER = 0;
-
-    // CanfdRegs.RBUF.RIDST.bit.IDE = 0;        // 0: standard frame ID; 1: extended frame ID
-    // CanfdRegs.RBUF.RIDST.bit.RTR = 0;        // 0: data frame; 1: remote frame(for can)
-    // CanfdRegs.RBUF.RIDST.bit.FDF_EDL = 1;    // 0: can 2.0; 1:can_fd
-    // CanfdRegs.RBUF.RIDST.bit.BRS = 1;        // 1：开启接收canfd加速模式
-
-    // CanfdRegs.RBUF.RIDST.bit.KOER = 0;
-
-    
     canfd_ringbuffer_init();   
 }
-
-uint16_t t_cnt = 0,r_cnt = 0;
 
 /**
  * @brief 发送一帧数据
@@ -183,9 +120,8 @@ static inline void sendCanFrame_fifo(canFrame_t *canFrame)
 
     CanfdRegs.TCTRL.bit.TSNEXT = 1;
     CanfdRegs.CFG_STAT.bit.TPE = 0;
-    CanfdRegs.CFG_STAT.bit.TSONE = 1;
-    CanfdRegs.CFG_STAT.bit.TSALL = 0;
-    t_cnt++;
+    CanfdRegs.CFG_STAT.bit.TSONE = 0;
+    CanfdRegs.CFG_STAT.bit.TSALL = 1;
 }
 
 /**
@@ -222,7 +158,6 @@ interrupt void canfd_IsrHander1(void)
             }
 
             CanfdRegs.TCTRL.bit.RREL = 1; // 释放一个槽位
-            r_cnt++;
         }
     }
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP4;
@@ -265,7 +200,7 @@ void COM_CAN_loop(void)
     canFrame_t canFrame_temp = {0};
 
     // RX loop
-    for(uint16_t i = 0; i < 3; i++)
+    for(uint16_t i = 0; i < 3; i++) // 意味着每0.5ms最多处理3帧数据，如果短时间的高速数据涌入导致软件fifo满就会丢数据
     {
         if(ringbuffer_used(&canFrameRxRingbuffer) < sizeof(canFrame_t)) break;
         ringbuffer_out(&canFrameRxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
@@ -279,13 +214,5 @@ void COM_CAN_loop(void)
         ringbuffer_out(&canFrameTxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
         sendCanFrame_fifo(&canFrame_temp);
     }
-
-//    #define MSG_ID_HEARTBEAT    0x700
-//    // Send heartbeat
-//    canFrame_t canFrame_temp;
-//    canFrame_temp.id = MSG_ID_HEARTBEAT + node_id;
-//    canFrame_temp.len = 1;
-//    canFrame_temp.data[0] = 0x05;
-//    enqueue_tx_frame(&canFrame_temp);
 }
 
