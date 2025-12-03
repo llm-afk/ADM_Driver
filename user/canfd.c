@@ -91,20 +91,6 @@ void canfd_init(void)
     CanfdRegs.CFG_STAT.bit.TBSEL = 1; // 配置为二级缓冲区
     CanfdRegs.CFG_STAT.bit.TPE = 0;
 
-    CanfdRegs.TBUF.RIDST.bit.IDE = 0;        // 0: standard frame ID; 1: extended frame ID
-    CanfdRegs.TBUF.RIDST.bit.RTR = 0;        // 0: data frame; 1: remote frame(for can)
-    CanfdRegs.TBUF.RIDST.bit.FDF_EDL = 1;    // 0: can 2.0; 1:can_fd
-    CanfdRegs.TBUF.RIDST.bit.BRS = 1;        // 1：开启发送canfd加速模式
-
-    CanfdRegs.RBUF.RIDST.bit.KOER = 0;
-
-    CanfdRegs.RBUF.RIDST.bit.IDE = 0;        // 0: standard frame ID; 1: extended frame ID
-    CanfdRegs.RBUF.RIDST.bit.RTR = 0;        // 0: data frame; 1: remote frame(for can)
-    CanfdRegs.RBUF.RIDST.bit.FDF_EDL = 1;    // 0: can 2.0; 1:can_fd
-    CanfdRegs.RBUF.RIDST.bit.BRS = 1;        // 1：开启接收canfd加速模式
-
-    CanfdRegs.RBUF.RIDST.bit.KOER = 0;
-
     canfd_ringbuffer_init();   
 }
 
@@ -117,6 +103,11 @@ static inline void sendCanFrame_fifo(canFrame_t *canFrame)
     CanfdRegs.TBUF.RID0.bit.ID0 = canFrame->id; // 写入canid
     CanfdRegs.TBUF.RIDST.bit.DLC = CANFD_LEN_TO_DLC(canFrame->len); // 获取帧数据的dlc
     memcpy(CanfdRegs.TBUF.DATA, canFrame->data, ((canFrame->len + 1) >> 1)); // 复制实际的数据段数据到临时缓冲区
+
+    CanfdRegs.TBUF.RIDST.bit.IDE = 0;        // 0: standard frame ID; 1: extended frame ID
+    CanfdRegs.TBUF.RIDST.bit.RTR = 0;        // 0: data frame; 1: remote frame(for can)
+    CanfdRegs.TBUF.RIDST.bit.FDF_EDL = 1;    // 0: can 2.0; 1:can_fd
+    CanfdRegs.TBUF.RIDST.bit.BRS = 1;        // 1：开启发送canfd加速模式
 
     CanfdRegs.TCTRL.bit.TSNEXT = 1;
     CanfdRegs.CFG_STAT.bit.TPE = 0;
