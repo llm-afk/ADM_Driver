@@ -13,6 +13,8 @@ extern MT_STRUCT gIMT;
 extern UVW_STRUCT gIUVW;
 int16_t debug_buffer[2000] = {0};
 
+uint32_t aaa =1;
+
 void main(void)
 {
     InitSysCtrl();                      // Step 1. Initialize System Control
@@ -25,6 +27,9 @@ void main(void)
     EINT; //使能全局中断
     ERTM; //使能实时模式
 
+    eeprom_init();
+    load_eeprom_to_ram();
+
     stimer_init(&stimer_main);
     stimer_addTask(&stimer_main, 0, 1, 0, KickDog);
     stimer_addTask(&stimer_main, 1, 1, 0, SystemLeve05msMotor);
@@ -33,9 +38,6 @@ void main(void)
     stimer_addTask(&stimer_main, 4, 4, 0, SystemLeve2msMotor);
     stimer_addTask(&stimer_main, 5, 4, 2, SystemLeve2msFunction);
     stimer_addTask(&stimer_main, 6, 1, 0, COM_CAN_loop);
-
-    eeprom_init();
-    load_eeprom_to_ram();
 
     while(1)
     {

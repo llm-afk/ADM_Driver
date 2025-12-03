@@ -62,23 +62,23 @@ void canfd_init(void)
     // clk
     CanfdRegs.CANCFG.bit.CAN_CLK_SEL = 0;   // 0:sysclk 1:pllclk
 
-    // Arbitration Phase：1M
+    // Arbitration Phase：1M @ 75%
     CanfdRegs.S_CFG.bit.S_PRESC = 4;  
     CanfdRegs.S_SEG.bit.S_Seg_1 = 13; 
     CanfdRegs.S_SEG.bit.S_Seg_2 = 4;  
     CanfdRegs.S_CFG.bit.S_SJW   = 2; 
 
-    // Data Phase：5M
+    // Data Phase：4M @ 80%
     CanfdRegs.F_CFG.bit.F_PRESC = 0; 
-    CanfdRegs.F_SEG.bit.F_Seg_1 = 13;     
-    CanfdRegs.F_SEG.bit.F_Seg_2 = 4;    
-    CanfdRegs.F_CFG.bit.F_SJW   = 1;     
+    CanfdRegs.F_SEG.bit.F_Seg_1 = 11;     
+    CanfdRegs.F_SEG.bit.F_Seg_2 = 11;    
+    CanfdRegs.F_CFG.bit.F_SJW   = 3;     
 
     canfd_config_filter_low7_dual(0, 1); // 配置滤波器
 
     // TDC
     CanfdRegs.DELAY_EALCAP.bit.TDCEN = 1;
-    CanfdRegs.DELAY_EALCAP.bit.SSPOFF = 0;
+    CanfdRegs.DELAY_EALCAP.bit.SSPOFF = 5;
 
     CanfdRegs.CFG_STAT.bit.RESET = 0;
     
@@ -154,6 +154,15 @@ interrupt void canfd_IsrHander1(void)
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP4;
 }
 
+uint16_t flaga = 0;
+#define Q12_TO_FLOAT(x)   ((float)(x) / 4096.0f)
+#define SWAP16(x)   ( ((uint16_t)(x) >> 8) | ((uint16_t)(x) << 8) )
+#define SWAP32_16(x)   ((((uint32_t)(x) & 0x0000FFFF) << 16) | (((uint32_t)(x) & 0xFFFF0000) >> 16))
+#define HI16(x)   ( (uint16_t)(((uint32_t)(x) >> 16) & 0xFFFF) )
+#define LO16(x)   ( (uint16_t)((uint32_t)(x) & 0xFFFF) )
+
+#include "MotorInclude.h"
+#include "encoder.h"
 /**
  * @brief CAN 数据帧解析函数
  * @param frame 待解析的 CAN 数据帧
@@ -161,24 +170,41 @@ interrupt void canfd_IsrHander1(void)
 #pragma CODE_SECTION(parse_frame, "ramfuncs");
 static void parse_frame(canFrame_t *frame)
 {
-    enqueue_tx_frame(frame);
-    // uint16_t msg_id = GET_MSG_ID(frame->id);
-    // uint16_t node_id = GET_NODE_ID(frame->id);
-    // if(node_id == 0) // 软件过滤需要的node_id的帧数据
-    // {
-    //     switch(msg_id)
-    //     {
-    //         case 0:
-    //         {
+    //enqueue_tx_frame(frame);
+    uint16_t msg_id = GET_MSG_ID(frame->id);
+    uint16_t node_id = GET_NODE_ID(frame->id);
+    switch(msg_id)
+    {
+        case 0x600:
+        {
+            frame->id = 0x581;
+            frame->len = 8;
+            frame->data[0] = 0x0080;
+            frame->data[1] = 0x0020;
+            frame->data[2] = 0x0000;
+            frame->data[3] = 0x0000;
+            enqueue_tx_frame(frame);
+            flaga++;
+            break;   
+        }
+        case 0x100:
+        {
+            frame->id = 0x191;
+            frame->len = 16; 
+            *(float*)&frame->data[0] = (float)encoder.main_encoder_raw_val; // 32bit的高16bit
+            frame->data[2] = 0;
+            frame->data[3] = 0;
+            *(float*)&frame->data[4] = Q12_TO_FLOAT(gIMT.T); 
+            frame->data[6] = 0;
+            frame->data[7] = 300;
+            enqueue_tx_frame(frame);
+        }
 
-    //             break;   
-    //         }
-    //         default:
-    //         {
-    //             break;       
-    //         }
-    //     }
-    // }
+        default:
+        {
+            break;       
+        }
+    }
 }
 
 /**
