@@ -7,6 +7,7 @@
 #include "flash_eeprom.h"
 #include "canfd.h"
 #include "od.h"
+#include "iap.h"
 
 stimer_t stimer_main; // 主函数用软定时器模块
 
@@ -32,11 +33,12 @@ void main(void)
     stimer_init(&stimer_main);
     stimer_addTask(&stimer_main, 0, 1, 0, KickDog);
     stimer_addTask(&stimer_main, 1, 1, 0, SystemLeve05msMotor);
-    stimer_addTask(&stimer_main, 2, 1, 0, SystemLeve05msMotor);
-    stimer_addTask(&stimer_main, 3, 1, 0, SystemLeve05msFunction);
-    stimer_addTask(&stimer_main, 4, 4, 0, SystemLeve2msMotor);
-    stimer_addTask(&stimer_main, 5, 4, 2, SystemLeve2msFunction);
-    stimer_addTask(&stimer_main, 6, 1, 0, COM_CAN_loop);
+    stimer_addTask(&stimer_main, 2, 1, 0, SystemLeve05msFunction);
+    stimer_addTask(&stimer_main, 3, 4, 0, SystemLeve2msMotor);
+    stimer_addTask(&stimer_main, 4, 4, 2, SystemLeve2msFunction);
+    stimer_addTask(&stimer_main, 5, 1, 0, COM_CAN_loop);
+
+
     
     while(1)
     {

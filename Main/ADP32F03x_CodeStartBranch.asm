@@ -35,12 +35,10 @@ main_init:
 	RPT		@AR4
 	|| MOV	*XAR5++,	ACC
 	
-	MOVL 	XAR5,	#8000H		;Clear L0 and half of H0
-	MOVL 	XAR4,	#(3000H-1)
+	MOVL 	XAR5,	#8000H		
+	MOVL 	XAR4,	#(2FFFH-1)  ;except the last address
 	RPT		@AR4
 	|| MOV	*XAR5++,	ACC
-
-
 
 	LB _c_int00					;此处跳转到C语言的main函数处
 

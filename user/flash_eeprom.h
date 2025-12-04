@@ -36,4 +36,7 @@ void eeprom_init(void);
 uint16_t load_eeprom_to_ram(void);
 uint16_t load_ram_item_to_eeprom_from_key(uint16_t key);
 
+uint16_t flash_erase_sector(uint16_t sectorMask);
+uint16_t flash_program(uint16_t *flashAddr, uint16_t *dataBuf, uint16_t length);
+
 #endif

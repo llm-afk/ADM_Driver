@@ -29,11 +29,13 @@
 #define GET_MSG_ID(canid)   (canid & 0x780) // 获取 11bit 中高 4bit 的msg_id
 #define GET_NODE_ID(canid)  (canid & 0x07F) // 获取 11bit 中低 7bit 的node_id
 
-#define MSG_ID_SDO_SRV      0x580   /**< 0x580, SDO response from server    (+nodeID) */
-#define MSG_ID_SDO_CLI      0x600   /**< 0x600, SDO request from client     (+nodeID) */
+#define MSG_ID_SDO_SRV      0x580
+#define MSG_ID_SDO_CLI      0x600
 
-#define MSG_ID_RPDO_5       0x100   /**< 0x500, Default RPDO5               (+nodeID) */
-#define MSG_ID_TPDO_5       0x190   /**< 0x180, Default TPDO1               (+nodeID) */
+#define MSG_ID_RPDO_5       0x100 
+#define MSG_ID_TPDO_5       0x190  
+
+#define MSG_ID_DFU          0x680 
 
 #define CS_R        0x40
 #define CS_R_ACK_1  0x4F

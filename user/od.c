@@ -11,9 +11,9 @@ typedef struct {
     int (*update_func)(void);
 } OD_entry_t;
 
-static const OD_entry_t ODList[] = {
+static const OD_entry_t ODList[] = 
+{
     {0x2040, &ODObjs.node_id,                   1, ATTR_ROM | ATTR_RW, NULL},
-    
 };
 
 static void dictionary_init(void)

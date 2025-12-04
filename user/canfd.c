@@ -44,22 +44,57 @@ static void canfd_config_filter_low7_dual(uint16_t id1, uint16_t id2)
 }
 
 /**
- * @brief 配置canfd外设
+ * @brief 配置canfd的波特率
+ * @param lowSpeed 低速的仲裁段的波特率
+ * @param highSpeed 高速的数据段的波特率
+ */
+static void canfd_config_baudRate(uint16_t lowSpeed, uint16_t highSpeed)
+{
+    switch(lowSpeed)
+    {
+        case 1:
+        {
+            // Arbitration Phase：1M @ 75%
+            CanfdRegs.S_CFG.bit.S_PRESC = 4;  
+            CanfdRegs.S_SEG.bit.S_Seg_1 = 13; 
+            CanfdRegs.S_SEG.bit.S_Seg_2 = 4;  
+            CanfdRegs.S_CFG.bit.S_SJW   = 2; 
+        }
+        default :
+        {
+            break;
+        }
+    }
+    switch(highSpeed)
+    {
+        case 4:
+        {
+            // Data Phase：4M @ 80%
+            CanfdRegs.F_CFG.bit.F_PRESC = 0; 
+            CanfdRegs.F_SEG.bit.F_Seg_1 = 11;     
+            CanfdRegs.F_SEG.bit.F_Seg_2 = 11;    
+            CanfdRegs.F_CFG.bit.F_SJW   = 3;     
+        }
+        default :
+        {
+            break;
+        }
+    }
+}
+
+/**
+ * @brief canfd配置
  */
 void canfd_init(void)
 {
-    mNodeID = ODObjs.node_id; // 加载节点ID
+    // load param
+    mNodeID = ODObjs.node_id;
 
+    // gpio
     EALLOW;
-#if 0
-    GpioCtrlRegs.GPAPUD.bit.GPIO28 = 1;      // CANFD_Rx
-    GpioCtrlRegs.GPAPUD.bit.GPIO29 = 1;     // CANFD_Tx
-    AnalogRegs.PIN_MUX_FLASH.bit.canfd_gpio_mux = 0xA;   //GPIO0 CANFDRXD ; GPIO32 CANFDTXD
-#else
     GpioCtrlRegs.GPAPUD.bit.GPIO0 = 1;      // CANFD_Rx
     GpioCtrlRegs.GPBPUD.bit.GPIO32 = 1;     // CANFD_Tx
     AnalogRegs.PIN_MUX_FLASH.bit.canfd_gpio_mux = 0x5;   //GPIO0 CANFDRXD ; GPIO32 CANFDTXD
-#endif
     EDIS;
 
     CanfdRegs.CFG_STAT.bit.RESET = 1; 
@@ -67,19 +102,11 @@ void canfd_init(void)
     // clk
     CanfdRegs.CANCFG.bit.CAN_CLK_SEL = 0;   // 0:sysclk 1:pllclk
 
-    // Arbitration Phase：1M @ 75%
-    CanfdRegs.S_CFG.bit.S_PRESC = 4;  
-    CanfdRegs.S_SEG.bit.S_Seg_1 = 13; 
-    CanfdRegs.S_SEG.bit.S_Seg_2 = 4;  
-    CanfdRegs.S_CFG.bit.S_SJW   = 2; 
+    // band rate
+    canfd_config_baudRate(1, 4);
 
-    // Data Phase：4M @ 80%
-    CanfdRegs.F_CFG.bit.F_PRESC = 0; 
-    CanfdRegs.F_SEG.bit.F_Seg_1 = 11;     
-    CanfdRegs.F_SEG.bit.F_Seg_2 = 11;    
-    CanfdRegs.F_CFG.bit.F_SJW   = 3;     
-
-    canfd_config_filter_low7_dual(0, mNodeID); // 配置滤波器
+    // filter
+    canfd_config_filter_low7_dual(0, mNodeID);
 
     // TDC
     CanfdRegs.DELAY_EALCAP.bit.TDCEN = 1;
@@ -87,9 +114,9 @@ void canfd_init(void)
 
     CanfdRegs.CFG_STAT.bit.RESET = 0;
     
-    // // 中断配置
+    // interrupt
     CanfdRegs.RTINTFE.all = 0;
-    CanfdRegs.RTINTFE.bit.RIE = 1; // 开启接收缓冲区非空中断
+    CanfdRegs.RTINTFE.bit.RIE = 1; // 只开启接收缓冲区非空中断
 
     // config
     CanfdRegs.TCTRL.bit.TSMODE = 0;   // 0 = FIFO mode
@@ -134,7 +161,7 @@ inline void enqueue_tx_frame(canFrame_t *frame)
 }
 
 /**
- * @brief canfd接收总中断
+ * @brief canfd总中断
  */
 #pragma CODE_SECTION(canfd_IsrHander1, "ramfuncs");
 interrupt void canfd_IsrHander1(void)
@@ -144,13 +171,13 @@ interrupt void canfd_IsrHander1(void)
         CanfdRegs.RTINTFE.bit.RIF = 1;
         while(CanfdRegs.TCTRL.bit.RSTAT != 0)
         {
-            if(ringbuffer_avail(&canFrameRxRingbuffer) >= sizeof(canFrame_t)) // 接收缓冲区还有空余的帧空间
+            if(ringbuffer_avail(&canFrameRxRingbuffer) >= sizeof(canFrame_t)) 
             {
                 canFrame_t canFrame_temp = {0};
-                canFrame_temp.id = CanfdRegs.RBUF.RID0.bit.ID0; // 解析canid
-                canFrame_temp.len = CANFD_DLC_TO_LEN(CanfdRegs.RBUF.RIDST.bit.DLC); // 解析数据段实际的字节数
-                memcpy(canFrame_temp.data, CanfdRegs.RBUF.DATA, ((canFrame_temp.len + 1) >> 1)); // 复制实际的数据段数据到临时缓冲区
-                ringbuffer_in(&canFrameRxRingbuffer, &canFrame_temp, sizeof(canFrame_t)); // 将帧压入接收帧环形缓冲区
+                canFrame_temp.id = CanfdRegs.RBUF.RID0.bit.ID0; 
+                canFrame_temp.len = CANFD_DLC_TO_LEN(CanfdRegs.RBUF.RIDST.bit.DLC);
+                memcpy(canFrame_temp.data, CanfdRegs.RBUF.DATA, ((canFrame_temp.len + 1) >> 1)); 
+                ringbuffer_in(&canFrameRxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
             }
 
             CanfdRegs.TCTRL.bit.RREL = 1; // 释放一个槽位
@@ -174,9 +201,9 @@ static void parse_frame(canFrame_t *frame)
         {
             if(frame->len == 8)
             {
-                uint16_t cs = __byte(frame->data, 0); // 获取命令字节
-                uint16_t idx = (__byte(frame->data, 2) << 8) | __byte(frame->data, 1); // 获取索引字节
-                uint16_t *data = &frame->data[2]; // 获取数据段首地址字节
+                uint16_t cs = __byte(frame->data, 0);
+                uint16_t idx = (__byte(frame->data, 2) << 8) | __byte(frame->data, 1); 
+                uint16_t *data = &frame->data[2]; 
 
                 __byte(frame->data, 0) = CS_ERR; // 初始化命令字节为错误
 
@@ -222,6 +249,42 @@ static void parse_frame(canFrame_t *frame)
             frame->data[6] = 0; // 电机温度(int16)
             frame->data[7] = 300; // 驱动器温度(int16)
             enqueue_tx_frame(frame);
+            break;   
+        }
+        case MSG_ID_DFU:
+        {
+            if(frame->len == 4)
+            {
+                if(*(uint32_t*)&frame->data[0] = 0xDDDDDDDD) // 升级请求
+                {
+                    if(!clean_download()) // 擦除dowmload区域成功
+                    {
+                        *(uint32_t*)&frame->data[0] = 0xDDDDDDDD; // ack
+                    }
+                    else
+                    {
+                        *(uint32_t*)&frame->data[0] = 0x00000000; // nack
+                    }
+                }
+                else if(*(uint32_t*)&frame->data[0] == 0xFFFFFFFF) // 升级数据发送完成
+                {
+                    *(uint32_t*)&frame->data[0] = 0xFFFFFFFF; // ack
+                    enqueue_tx_frame(frame);
+
+                    // delay 100ms
+
+                    // jump to bootloader
+
+                }
+            }
+            else
+            {
+                // 将新来的8字节数据攒满一个扇区然后刷到dowmload区域
+                
+                frame->len = 0;
+            }
+            enqueue_tx_frame(frame);
+            break;
         }
         default:
         {

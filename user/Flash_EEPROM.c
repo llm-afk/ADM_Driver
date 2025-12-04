@@ -16,7 +16,7 @@ eeprom_item_t eeprom_item_list[] = {
  * @return 0:擦除成功 其他值：失败
  */
 #pragma CODE_SECTION(flash_erase_sector, "ramfuncs");
-uint16_t inline flash_erase_sector(uint16_t sectorMask)
+uint16_t flash_erase_sector(uint16_t sectorMask)
 {
     // 系统暂停
     DisableDog();
@@ -43,7 +43,7 @@ uint16_t inline flash_erase_sector(uint16_t sectorMask)
  * @return 0:写入成功 其他值：失败
  */
 #pragma CODE_SECTION(flash_program, "ramfuncs");
-uint16_t inline flash_program(uint16_t *flashAddr, uint16_t *dataBuf, uint16_t length)
+uint16_t flash_program(uint16_t *flashAddr, uint16_t *dataBuf, uint16_t length)
 {
     //系统暂停
     DisableDog();
