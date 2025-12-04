@@ -3,4 +3,5 @@
 <projectOptions>
 	<isTargetManual value="true"/>
 	<deviceFamily value="C2000"/>
+	<sourceLookupPath value=""/>
 </projectOptions>
