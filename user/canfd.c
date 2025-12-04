@@ -1,9 +1,12 @@
 #include "canfd.h"
+#include "od.h"
 
 ringbuffer_t canFrameRxRingbuffer  = {0}; // 接收ringbuffer控制块
 uint16_t canFrameRxBuffer[1024]    = {0}; // 接收ringbuffer缓冲区
 ringbuffer_t canFrameTxRingbuffer  = {0}; // 发送ringbuffer控制块
 uint16_t canFrameTxBuffer[1024]    = {0}; // 发送ringbuffer缓冲区 
+
+uint16_t mNodeID;
 
 /**
  * @brief 初始化canfd协议需要的环形缓冲区
@@ -45,6 +48,8 @@ static void canfd_config_filter_low7_dual(uint16_t id1, uint16_t id2)
  */
 void canfd_init(void)
 {
+    mNodeID = ODObjs.node_id; // 加载节点ID
+
     EALLOW;
 #if 0
     GpioCtrlRegs.GPAPUD.bit.GPIO28 = 1;      // CANFD_Rx
@@ -74,7 +79,7 @@ void canfd_init(void)
     CanfdRegs.F_SEG.bit.F_Seg_2 = 11;    
     CanfdRegs.F_CFG.bit.F_SJW   = 3;     
 
-    canfd_config_filter_low7_dual(0, 1); // 配置滤波器
+    canfd_config_filter_low7_dual(0, mNodeID); // 配置滤波器
 
     // TDC
     CanfdRegs.DELAY_EALCAP.bit.TDCEN = 1;
@@ -154,15 +159,6 @@ interrupt void canfd_IsrHander1(void)
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP4;
 }
 
-uint16_t flaga = 0;
-#define Q12_TO_FLOAT(x)   ((float)(x) / 4096.0f)
-#define SWAP16(x)   ( ((uint16_t)(x) >> 8) | ((uint16_t)(x) << 8) )
-#define SWAP32_16(x)   ((((uint32_t)(x) & 0x0000FFFF) << 16) | (((uint32_t)(x) & 0xFFFF0000) >> 16))
-#define HI16(x)   ( (uint16_t)(((uint32_t)(x) >> 16) & 0xFFFF) )
-#define LO16(x)   ( (uint16_t)((uint32_t)(x) & 0xFFFF) )
-
-#include "MotorInclude.h"
-#include "encoder.h"
 /**
  * @brief CAN 数据帧解析函数
  * @param frame 待解析的 CAN 数据帧
@@ -170,36 +166,63 @@ uint16_t flaga = 0;
 #pragma CODE_SECTION(parse_frame, "ramfuncs");
 static void parse_frame(canFrame_t *frame)
 {
-    //enqueue_tx_frame(frame);
     uint16_t msg_id = GET_MSG_ID(frame->id);
     uint16_t node_id = GET_NODE_ID(frame->id);
     switch(msg_id)
     {
-        case 0x600:
+        case MSG_ID_SDO_CLI:
         {
-            frame->id = 0x581;
-            frame->len = 8;
-            frame->data[0] = 0x0080;
-            frame->data[1] = 0x0020;
-            frame->data[2] = 0x0000;
-            frame->data[3] = 0x0000;
-            enqueue_tx_frame(frame);
-            flaga++;
+            if(frame->len == 8)
+            {
+                uint16_t cs = __byte(frame->data, 0); // 获取命令字节
+                uint16_t idx = (__byte(frame->data, 2) << 8) | __byte(frame->data, 1); // 获取索引字节
+                uint16_t *data = &frame->data[2]; // 获取数据段首地址字节
+
+                __byte(frame->data, 0) = CS_ERR; // 初始化命令字节为错误
+
+                if(cs == CS_R)
+                {
+                    __byte(frame->data, 0) = OD_read(idx, data);
+                }
+                else if(cs == CS_W_1)
+                {
+                    __byte(frame->data, 0) = OD_write_1(idx, data);
+                }
+                else if(cs == CS_W_2)
+                {
+                    __byte(frame->data, 0) = OD_write_2(idx, data);
+                }
+                else if(cs == CS_W_4)
+                {
+                    __byte(frame->data, 0) = OD_write_4(idx, data);
+                }
+
+                frame->id = MSG_ID_SDO_SRV + mNodeID;
+                enqueue_tx_frame(frame);
+            }
             break;   
         }
-        case 0x100:
+        case MSG_ID_RPDO_5:
         {
-            frame->id = 0x191;
+            // aa = *(float*)&frame->data[0]; // 设置目标位置
+            // bb = *(float*)&frame->data[2]; // 设置目标速度
+            // cc = *(float*)&frame->data[4]; // 设置前馈电流
+            // dd = *(uint16_t*)&frame->data[6]/100.0f; // 设置比例增益
+            // ee = *(uint16_t*)&frame->data[7]/100.0f; // 设置微分增益
+
+            frame->id = MSG_ID_TPDO_5 + mNodeID;
             frame->len = 16; 
-            *(float*)&frame->data[0] = (float)encoder.main_encoder_raw_val; // 32bit的高16bit
-            frame->data[2] = 0;
-            frame->data[3] = 0;
-            *(float*)&frame->data[4] = Q12_TO_FLOAT(gIMT.T); 
-            frame->data[6] = 0;
-            frame->data[7] = 300;
+            // if(0) 
+            // {
+            //     frame->len = 20; 
+            // }
+            *(float*)&frame->data[0] = 0; // 位置(float)
+            *(float*)&frame->data[2] = 0; // 速度(float)
+            *(float*)&frame->data[4] = 3.14f; // 力矩(float)
+            frame->data[6] = 0; // 电机温度(int16)
+            frame->data[7] = 300; // 驱动器温度(int16)
             enqueue_tx_frame(frame);
         }
-
         default:
         {
             break;       
@@ -217,7 +240,7 @@ void COM_CAN_loop(void)
     canFrame_t canFrame_temp = {0};
 
     // RX loop
-    for(uint16_t i = 0; i < 3; i++) // 意味着每0.5ms最多处理3帧数据，如果短时间的高速数据涌入导致软件fifo满就会丢数据
+    for(uint16_t i = 0; i < 3; i++)
     {
         if(ringbuffer_used(&canFrameRxRingbuffer) < sizeof(canFrame_t)) break;
         ringbuffer_out(&canFrameRxRingbuffer, &canFrame_temp, sizeof(canFrame_t));

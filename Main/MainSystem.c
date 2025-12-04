@@ -6,30 +6,32 @@
 #include "stimer.h"
 #include "flash_eeprom.h"
 #include "canfd.h"
-
+#include "od.h"
 stimer_t stimer_main; // 主函数用软定时器模块
 
 extern MT_STRUCT gIMT;
 extern UVW_STRUCT gIUVW;
 int16_t debug_buffer[2000] = {0};
 
-uint32_t aaa =1;
-
 void main(void)
 {
-    InitSysCtrl();                      // Step 1. Initialize System Control
-    InitInterrupt();                    // Step 2. Initialize Interrupt service program:
-    InitPeripherals();                  // Step 3. Initialize all the Device Peripherals:
-    InitForMotorApp();                  // Step 4. User specific code
+    InitSysCtrl();                   
+    InitInterrupt();                 
+    InitPeripherals();             
+    InitForMotorApp();        
     InitForFunctionApp();
     EnableDog();
-    SetInterruptEnable();               // Step 5. enable interrupts:
+    SetInterruptEnable();        
     EINT; //使能全局中断
     ERTM; //使能实时模式
 
-    eeprom_init();
-    load_eeprom_to_ram();
+    OD_init(); // 先初始化OD对象,初始化参数默认值
 
+    eeprom_init();
+    load_eeprom_to_ram(); // 初始化参数
+
+    canfd_init(); // 根据eeprom参数初始化canfd
+    
     stimer_init(&stimer_main);
     stimer_addTask(&stimer_main, 0, 1, 0, KickDog);
     stimer_addTask(&stimer_main, 1, 1, 0, SystemLeve05msMotor);
@@ -38,7 +40,7 @@ void main(void)
     stimer_addTask(&stimer_main, 4, 4, 0, SystemLeve2msMotor);
     stimer_addTask(&stimer_main, 5, 4, 2, SystemLeve2msFunction);
     stimer_addTask(&stimer_main, 6, 1, 0, COM_CAN_loop);
-
+    
     while(1)
     {
         stimer_loop(&stimer_main);

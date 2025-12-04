@@ -136,7 +136,6 @@ void InitPeripherals(void)
    	PreDriverInit();
    	DriverClaerFault();
 #endif
-    canfd_init();
    	InitSpi();
    	// Set up SCI function...
    	// SCI_Setup();

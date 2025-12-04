@@ -29,12 +29,31 @@
 #define GET_MSG_ID(canid)   (canid & 0x780) // 获取 11bit 中高 4bit 的msg_id
 #define GET_NODE_ID(canid)  (canid & 0x07F) // 获取 11bit 中低 7bit 的node_id
 
+#define MSG_ID_SDO_SRV      0x580   /**< 0x580, SDO response from server    (+nodeID) */
+#define MSG_ID_SDO_CLI      0x600   /**< 0x600, SDO request from client     (+nodeID) */
+
+#define MSG_ID_RPDO_5       0x100   /**< 0x500, Default RPDO5               (+nodeID) */
+#define MSG_ID_TPDO_5       0x190   /**< 0x180, Default TPDO1               (+nodeID) */
+
+#define CS_R        0x40
+#define CS_R_ACK_1  0x4F
+#define CS_R_ACK_2  0x4B
+#define CS_R_ACK_3  0x47
+#define CS_R_ACK_4  0x43
+#define CS_W_1      0x2F
+#define CS_W_2      0x2B
+#define CS_W_3      0x27
+#define CS_W_4      0x23
+#define CS_W_ACK    0x60
+#define CS_ERR      0x80
+
 typedef struct {
     uint16_t id;       // CAN ID：标准11位
     uint16_t len;      // 数据长度 查表后的实际的数据段字节数
     uint16_t data[32]; // 数据区：最多64字节，用32个 uint16_t 存储
 } canFrame_t;
 
+extern uint16_t m_nodeID;
 
 void canfd_init(void);
 interrupt void canfd_IsrHander1(void);

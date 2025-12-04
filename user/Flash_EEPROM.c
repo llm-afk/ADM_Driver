@@ -1,16 +1,13 @@
 
 #include "flash_eeprom.h"
-
-uint16_t Motor_ID[10] = {1,2,3,4,5,6,7,8,9,10};
-uint16_t Max_Current = 2;
-uint16_t Speed_Limit = 100;
+#include "canfd.h"
+#include "od.h"
 
 eeprom_t eeprom;
 uint16_t eeprom_data_temp[ADDR_NUM] = {0}; // eeprom²ÁÐ´±¸·Ý»º³åÇø
+
 eeprom_item_t eeprom_item_list[] = {
-    {0, 10, Motor_ID}, 
-    {1, 1, &Max_Current},  
-    {2, 1, &Speed_Limit},  
+    {0, sizeof(ODObjs_t), &ODObjs},
 };
 
 /**
