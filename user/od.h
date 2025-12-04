@@ -12,7 +12,6 @@
 
 typedef struct {
     uint16_t node_id;
-    float    motor_r;
 }ODObjs_t;
 
 extern ODObjs_t ODObjs;

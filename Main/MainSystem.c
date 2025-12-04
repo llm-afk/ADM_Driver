@@ -7,11 +7,8 @@
 #include "flash_eeprom.h"
 #include "canfd.h"
 #include "od.h"
-stimer_t stimer_main; // 主函数用软定时器模块
 
-extern MT_STRUCT gIMT;
-extern UVW_STRUCT gIUVW;
-int16_t debug_buffer[2000] = {0};
+stimer_t stimer_main; // 主函数用软定时器模块
 
 void main(void)
 {
@@ -67,12 +64,6 @@ interrupt void ZeroOfEPWMISR(void)
     ADCOverInterrupt();
     DINT;
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP3; // Acknowledge this interrupt
-
-    // 记录debug数据
-    static uint16_t index = 0;
-    debug_buffer[index] = gIUVW.U;
-    index++;
-    index%=2000;
 
     // 向stimer模块提供心跳
     static Uint16 stimer_main_cnt = 0;

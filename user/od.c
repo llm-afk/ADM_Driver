@@ -13,13 +13,12 @@ typedef struct {
 
 static const OD_entry_t ODList[] = {
     {0x2040, &ODObjs.node_id,                   1, ATTR_ROM | ATTR_RW, NULL},
-    {0x2051, &ODObjs.motor_r,                   4, ATTR_ROM | ATTR_RW, NULL},
+    
 };
 
 static void dictionary_init(void)
 {
     ODObjs.node_id = 1;
-    ODObjs.motor_r = 0.5629f;
 }
 
 static OD_entry_t *find_entry(uint16_t index)

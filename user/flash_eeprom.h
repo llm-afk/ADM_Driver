@@ -15,7 +15,7 @@ eeprom空间实际的存储结构：
 */
 
 #define START_ADDR CONFIG_ADDR // 分配的eeprom占用的flash的扇区起始地址
-#define ADDR_NUM 100 // 分配地址数量
+#define ADDR_NUM 1024 // 分配地址数量
 
 // 错误掩码
 #define ERROR_MASK_ERASE_FAIL    (1 << 0) // 扇区擦除失败
