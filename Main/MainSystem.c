@@ -38,8 +38,6 @@ void main(void)
     stimer_addTask(&stimer_main, 4, 4, 2, SystemLeve2msFunction);
     stimer_addTask(&stimer_main, 5, 1, 0, COM_CAN_loop);
 
-
-    
     while(1)
     {
         stimer_loop(&stimer_main);

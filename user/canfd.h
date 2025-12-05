@@ -3,6 +3,7 @@
 
 #include "MainInclude.h"
 #include "ringbuffer.h"
+#include "iap.h"
 
 #define CANFD_DLC_TO_LEN(dlc) ( \
     ((dlc) <  9) ? (dlc) : \

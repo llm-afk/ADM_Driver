@@ -3,7 +3,7 @@ MEMORY
 PAGE 0 :
    RAMPRG      : origin = 0x008000, length = 0x001000  
 
-   APP_SPACE   : origin = 0x3E8000, length = 0x006000    
+   APP_SPACE   : origin = 0x3F0000, length = 0x006000    
    CSM_RSVD    : origin = 0x3F7F80, length = 0x000076     
    BEGIN       : origin = 0x3F7FF6, length = 0x000002   
    CSM_PWL     : origin = 0x3F7FF8, length = 0x000008  

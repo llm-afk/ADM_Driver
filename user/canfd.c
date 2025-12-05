@@ -186,6 +186,10 @@ interrupt void canfd_IsrHander1(void)
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP4;
 }
 
+uint16_t flag1 = 0;
+uint16_t flag2 = 0;
+uint16_t flag3 = 0;
+
 /**
  * @brief CAN 数据帧解析函数
  * @param frame 待解析的 CAN 数据帧
@@ -247,7 +251,7 @@ static void parse_frame(canFrame_t *frame)
             *(float*)&frame->data[2] = 0; // 速度(float)
             *(float*)&frame->data[4] = 3.14f; // 力矩(float)
             frame->data[6] = 0; // 电机温度(int16)
-            frame->data[7] = 300; // 驱动器温度(int16)
+            frame->data[7] = 123; // 驱动器温度(int16)
             enqueue_tx_frame(frame);
             break;   
         }
@@ -255,9 +259,9 @@ static void parse_frame(canFrame_t *frame)
         {
             if(frame->len == 4)
             {
-                if(*(uint32_t*)&frame->data[0] = 0xDDDDDDDD) // 升级请求
+                if(*(uint32_t*)&frame->data[0] == 0xDDDDDDDD) // 升级请求
                 {
-                    if(!clean_download()) // 擦除dowmload区域成功
+                    if(!clean_download())
                     {
                         *(uint32_t*)&frame->data[0] = 0xDDDDDDDD; // ack
                     }
@@ -265,22 +269,23 @@ static void parse_frame(canFrame_t *frame)
                     {
                         *(uint32_t*)&frame->data[0] = 0x00000000; // nack
                     }
+                    addr_offset = 0;
                 }
-                else if(*(uint32_t*)&frame->data[0] == 0xFFFFFFFF) // 升级数据发送完成
+                else if(*(uint32_t*)&frame->data[0] == 0xFFFFFFFF)
                 {
                     *(uint32_t*)&frame->data[0] = 0xFFFFFFFF; // ack
-                    enqueue_tx_frame(frame);
+                    sendCanFrame_fifo(frame); // 这里不能塞到队列里面，要直接发送
 
+                    while(1);
                     // delay 100ms
 
                     // jump to bootloader
-
                 }
             }
             else
             {
                 // 将新来的8字节数据攒满一个扇区然后刷到dowmload区域
-                
+                write_iap_data(frame->data);
                 frame->len = 0;
             }
             enqueue_tx_frame(frame);
