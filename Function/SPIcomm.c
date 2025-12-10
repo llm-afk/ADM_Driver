@@ -5,9 +5,6 @@
 #include "AngleSensor.h"
 #include "encoder.h"
 
-Uint16 SpiSendData[11];
-DEGREE_STRUCT Degree;
-
 void InitSpi(void)
 {
     InitSpiIO();
@@ -48,13 +45,6 @@ void InitSpiIO(void)
     GpioCtrlRegs.GPAMUX2.bit.GPIO18 = 1; // Configure GPIO18 as SPICLKA
     GpioCtrlRegs.GPAMUX2.bit.GPIO19 = 1; // Configure GPIO19 as SPISTEA
 
-    //GpioCtrlRegs.GPAMUX2.bit.GPIO19 = 0;
-    //GpioCtrlRegs.GPADIR.bit.GPIO19 = 1;
-    //GpioDataRegs.GPASET.bit.GPIO19 = 1;
-
-    GpioCtrlRegs.GPBMUX1.bit.GPIO32 = 0;
-    GpioCtrlRegs.GPBDIR.bit.GPIO32 = 1;
-    GpioDataRegs.GPBDAT.bit.GPIO32 = 1;
     EDIS;
 }
 
@@ -72,44 +62,26 @@ Uint16 SPITransfer(Uint16 data)
     return SpiaRegs.SPIRXBUF;
 }
 
-
-extern uint16_t encoder_calibration_state;
-
 /**
- * @brief 获取编码器的原始角度，归一化到u16
+ * @brief 获取主编码器的原始角度u16
  */
-#pragma CODE_SECTION(AngleCal,"ramfuncs");
-uint16_t get_raw_angle_u16(void)
+#pragma CODE_SECTION(get_main_degree_raw,"ramfuncs");
+uint16_t get_main_degree_raw(void)
 {
     uint16_t h_data = SPITransfer(0x8300); // 获取主编码器03寄存器的高8位值
     uint16_t l_data = SPITransfer(0x8400); // 获取主编码器04寄存器的低6位值
-    return ((((h_data & 0x00FF) << 8) | (l_data & 0x00FF)) >> 2) << 2;
+    return (((((h_data & 0x00FF) << 8) | (l_data & 0x00FF)) >> 2) << 2);
 }
-
 
 /**
- * @brief 更新电角度
+ * @brief 获取副编码器的原始角度u16
  */
-#pragma CODE_SECTION(AngleCal,"ramfuncs");
-void AngleCal(void)
+#pragma CODE_SECTION(get_ex_degree_raw,"ramfuncs");
+uint16_t get_ex_degree_raw(void)
 {
-    encoder.main_encoder_raw_val = get_raw_angle_u16(); //  获取编码器的归一化到u16的原始角度
-
-    encoder.main_encoder_lined_val = encoder.main_encoder_raw_val; // 后续在这里做非线性的校准
-
-    Degree.ElecDegree = ((encoder.main_encoder_lined_val & 0x1FFF) << 3) - encoder.elec_degree_calib_val; // 机械角度(归一化到u16)根据8极对也就是%8192得到电角度(u13)左移3得到电角度(u16)再进行u16的零点校准
-    //Degree.ElecDegree = 0;
-    // 由于ElecDegree是u16的所以会自动溢出处理数据回绕的现象
+    // uint16_t h_data = SPITransfer(0x8300); // 获取主编码器03寄存器的高8位值
+    // uint16_t l_data = SPITransfer(0x8400); // 获取主编码器04寄存器的低6位值
+    // return (((((h_data & 0x00FF) << 8) | (l_data & 0x00FF)) >> 2) << 2);
 }
 
-void InitAngleSensor(void)
-{
-    Degree.MrSin_Calib = -3;//-20;//基准值
-    Degree.MrCos_Calib = -6;////-50;//基准值
-    Degree.InitElecDegree = 32224;//传感器校准电角度u16
-    Degree.MotorPairs = 8;
-    Degree.MachDegree = 0;
-    Degree.ElecDegree = 0;
-}
 
-// Speed calculation removed - speed loop not needed

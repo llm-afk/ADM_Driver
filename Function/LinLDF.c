@@ -145,12 +145,6 @@ void UpdateLinDataToVar(void)
     }
 }
 
-void LinData_init(void)
-{
-    Lin_Communication.EcwpSpdReq            = 0;
-    Lin_Communication.EcwpSafeMode          = 0;
-    Lin_Communication.EcwpEna               = 0;
-}
 
 unsigned short GetSetupFreComs(void)
 {

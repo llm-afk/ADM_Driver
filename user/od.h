@@ -11,6 +11,8 @@
 #define ATTR_RAM    0x08
 
 typedef struct {
+    uint16_t error_code;
+    uint16_t control_word;
     uint16_t node_id;
 }ODObjs_t;
 

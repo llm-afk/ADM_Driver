@@ -32,10 +32,10 @@ void jump_to_download(void)
  */
 void write_iap_data(uint16_t *data)
 {
-    if((addr_offset + 8) < DOWNLOAD_SIZE)
+    if((addr_offset + 4) < DOWNLOAD_SIZE)
     {
-        flash_program((uint16_t*)(DOWNLOAD_ADDR + 8), data, 8);
-        addr_offset+=8;
+        flash_program((uint16_t*)(DOWNLOAD_ADDR + 4), data, 4);
+        addr_offset+=4;
     }
 }
 
@@ -45,7 +45,7 @@ void write_iap_data(uint16_t *data)
  * @brief bootloader跳转到app
  * @note 
  */
-void jump_to_app(void)
+static void jump_to_app(void)
 {
     SET_IAP_FLAG(IAP_FLAG_NUM); // 设置更新标志位
     ResetDSP(); // 直接软重启dsp

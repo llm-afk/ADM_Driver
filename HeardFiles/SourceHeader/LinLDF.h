@@ -62,7 +62,6 @@ extern Lin_COMMUNICATION Lin_Communication;
 
 extern void UpdateRecivedLinDataToVars(void);
 extern void UpdateLinDataToSent(void);
-extern void LinData_init(void);
 extern void UpdateLinDataToVar(void);
 
 extern unsigned short GetSetupFreComs(void);

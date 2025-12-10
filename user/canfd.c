@@ -1,20 +1,21 @@
 #include "canfd.h"
 #include "od.h"
+#include "motor_ctrl.h"
+#include "MotorInclude.h"
+#include "encoder.h"
 
-ringbuffer_t canFrameRxRingbuffer  = {0}; // 接收ringbuffer控制块
-uint16_t canFrameRxBuffer[1024]    = {0}; // 接收ringbuffer缓冲区
-ringbuffer_t canFrameTxRingbuffer  = {0}; // 发送ringbuffer控制块
-uint16_t canFrameTxBuffer[1024]    = {0}; // 发送ringbuffer缓冲区 
-
-uint16_t mNodeID;
+ringbuffer_t canFrameRxRingbuffer = {0}; // 接收ringbuffer控制块
+uint16_t canFrameRxBuffer[512]   = {0}; // 接收ringbuffer缓冲区
+ringbuffer_t canFrameTxRingbuffer = {0}; // 发送ringbuffer控制块
+uint16_t canFrameTxBuffer[512]   = {0}; // 发送ringbuffer缓冲区 
 
 /**
  * @brief 初始化canfd协议需要的环形缓冲区
  */
 void canfd_ringbuffer_init(void)
 {
-    ringbuffer_init(&canFrameRxRingbuffer, canFrameRxBuffer, 1024);
-    ringbuffer_init(&canFrameTxRingbuffer, canFrameTxBuffer, 1024);
+    ringbuffer_init(&canFrameRxRingbuffer, canFrameRxBuffer, 512);
+    ringbuffer_init(&canFrameTxRingbuffer, canFrameTxBuffer, 512);
 }
 
 /**
@@ -24,8 +25,6 @@ void canfd_ringbuffer_init(void)
  */
 static void canfd_config_filter_low7_dual(uint16_t id1, uint16_t id2)
 {
-    //CanfdRegs.CFG_STAT.bit.RESET = 1;
-
     CanfdRegs.CIA_ACF_CFG.bit.ACFADR = 0; // 配置滤波器0
     CanfdRegs.CIA_ACF_CFG.bit.SELMASK = 1;// 切换到配置掩码
     CanfdRegs.ACF_0.all = 0xFF80;         // 配置掩码为低7位        
@@ -39,8 +38,6 @@ static void canfd_config_filter_low7_dual(uint16_t id1, uint16_t id2)
     CanfdRegs.CIA_ACF_CFG.bit.SELMASK = 0;// 配置掩码匹配值
     CanfdRegs.ACF_0.all = (id2 & 0x007F); // 配置低7位的掩码匹配值为id2
     CanfdRegs.ACF_EN.bit.AE_1 = 1;        // 使能滤波器1
-
-    //CanfdRegs.CFG_STAT.bit.RESET = 0;
 }
 
 /**
@@ -87,9 +84,6 @@ static void canfd_config_baudRate(uint16_t lowSpeed, uint16_t highSpeed)
  */
 void canfd_init(void)
 {
-    // load param
-    mNodeID = ODObjs.node_id;
-
     // gpio
     EALLOW;
     GpioCtrlRegs.GPAPUD.bit.GPIO0 = 1;      // CANFD_Rx
@@ -106,7 +100,7 @@ void canfd_init(void)
     canfd_config_baudRate(1, 4);
 
     // filter
-    canfd_config_filter_low7_dual(0, mNodeID);
+    canfd_config_filter_low7_dual(0, ODObjs.node_id);
 
     // TDC
     CanfdRegs.DELAY_EALCAP.bit.TDCEN = 1;
@@ -132,9 +126,9 @@ void canfd_init(void)
 #pragma CODE_SECTION(sendCanFrame_fifo, "ramfuncs");
 static inline void sendCanFrame_fifo(canFrame_t *canFrame)
 {
-    CanfdRegs.TBUF.RID0.bit.ID0 = canFrame->id; // 写入canid
-    CanfdRegs.TBUF.RIDST.bit.DLC = CANFD_LEN_TO_DLC(canFrame->len); // 获取帧数据的dlc
-    memcpy(CanfdRegs.TBUF.DATA, canFrame->data, ((canFrame->len + 1) >> 1)); // 复制实际的数据段数据到临时缓冲区
+    CanfdRegs.TBUF.RID0.bit.ID0 = canFrame->id; 
+    CanfdRegs.TBUF.RIDST.bit.DLC = CANFD_LEN_TO_DLC(canFrame->len); 
+    memcpy(CanfdRegs.TBUF.DATA, canFrame->data, ((canFrame->len + 1) >> 1));
 
     CanfdRegs.TBUF.RIDST.bit.IDE = 0;        // 0: standard frame ID; 1: extended frame ID
     CanfdRegs.TBUF.RIDST.bit.RTR = 0;        // 0: data frame; 1: remote frame(for can)
@@ -179,16 +173,11 @@ interrupt void canfd_IsrHander1(void)
                 memcpy(canFrame_temp.data, CanfdRegs.RBUF.DATA, ((canFrame_temp.len + 1) >> 1)); 
                 ringbuffer_in(&canFrameRxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
             }
-
             CanfdRegs.TCTRL.bit.RREL = 1; // 释放一个槽位
         }
     }
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP4;
 }
-
-uint16_t flag1 = 0;
-uint16_t flag2 = 0;
-uint16_t flag3 = 0;
 
 /**
  * @brief CAN 数据帧解析函数
@@ -228,30 +217,33 @@ static void parse_frame(canFrame_t *frame)
                     __byte(frame->data, 0) = OD_write_4(idx, data);
                 }
 
-                frame->id = MSG_ID_SDO_SRV + mNodeID;
+                frame->id = MSG_ID_SDO_SRV + ODObjs.node_id;
                 enqueue_tx_frame(frame);
             }
             break;   
         }
         case MSG_ID_RPDO_5:
         {
-            // aa = *(float*)&frame->data[0]; // 设置目标位置
-            // bb = *(float*)&frame->data[2]; // 设置目标速度
-            // cc = *(float*)&frame->data[4]; // 设置前馈电流
-            // dd = *(uint16_t*)&frame->data[6]/100.0f; // 设置比例增益
-            // ee = *(uint16_t*)&frame->data[7]/100.0f; // 设置微分增益
+            // 数据解析
+            motor_ctrl.position_ref_q12 = (int32_t)(*(float*)&frame->data[0] * 4096.0f); 
+            motor_ctrl.velocity_ref_q12 = (int32_t)(*(float*)&frame->data[2] * 4096.0f); 
+            motor_ctrl.current_ref_q12  = (int32_t)(*(float*)&frame->data[4] * 4096.0f); 
+            motor_ctrl.Kp_q12           = (uint32_t)(*(uint16_t*)&frame->data[6]) * 41; // q12格式缩放100倍
+            motor_ctrl.Kd_q12           = (uint32_t)(*(uint16_t*)&frame->data[7]) * 41; // q12格式缩放100倍
 
-            frame->id = MSG_ID_TPDO_5 + mNodeID;
+            // 数据上报
+            frame->id = MSG_ID_TPDO_5 + ODObjs.node_id;    
             frame->len = 16; 
-            // if(0) 
-            // {
-            //     frame->len = 20; 
-            // }
-            *(float*)&frame->data[0] = 0; // 位置(float)
-            *(float*)&frame->data[2] = 0; // 速度(float)
-            *(float*)&frame->data[4] = 3.14f; // 力矩(float)
-            frame->data[6] = 0; // 电机温度(int16)
-            frame->data[7] = 123; // 驱动器温度(int16)
+            if(ODObjs.error_code) 
+            {
+                frame->len = 20; 
+                *(uint16_t*)&frame->data[8] = ODObjs.error_code;
+            }
+            *(float*)&frame->data[0] = (float)encoder.position_q12_gear / 4096.0f; // 减速端位置反馈(rad)
+            *(float*)&frame->data[2] = (float)encoder.volacity_q12_gear / 4096.0f; // 减速端速度反馈(rad/s)
+            *(float*)&frame->data[4] = (float)gIMT.T * MOTOR_RATED_CUR  / 40960.0f; // 力矩(N/m)
+            frame->data[6] = (int16_t)123; // 电机温度 (0.1°)
+            frame->data[7] = (int16_t)456; // 驱动器温度 (0.1°)
             enqueue_tx_frame(frame);
             break;   
         }
@@ -259,7 +251,7 @@ static void parse_frame(canFrame_t *frame)
         {
             if(frame->len == 4)
             {
-                if(*(uint32_t*)&frame->data[0] == 0xDDDDDDDD) // 升级请求
+                if(*(uint32_t*)&frame->data[0] == 0xDDDDDDDD) 
                 {
                     if(!clean_download())
                     {
@@ -274,17 +266,15 @@ static void parse_frame(canFrame_t *frame)
                 else if(*(uint32_t*)&frame->data[0] == 0xFFFFFFFF)
                 {
                     *(uint32_t*)&frame->data[0] = 0xFFFFFFFF; // ack
-                    sendCanFrame_fifo(frame); // 这里不能塞到队列里面，要直接发送
+                    sendCanFrame_fifo(frame); 
 
-                    while(1);
-                    // delay 100ms
+                    ADP32F03x_usDelay(1000);
 
-                    // jump to bootloader
+                    jump_to_download();
                 }
             }
             else
             {
-                // 将新来的8字节数据攒满一个扇区然后刷到dowmload区域
                 write_iap_data(frame->data);
                 frame->len = 0;
             }
@@ -303,7 +293,7 @@ static void parse_frame(canFrame_t *frame)
  * @note 在stimer框架下面2khz执行
  */
 #pragma CODE_SECTION(COM_CAN_loop, "ramfuncs");
-void COM_CAN_loop(void)
+void can_com_loop(void)
 {
     canFrame_t canFrame_temp = {0};
 
@@ -323,4 +313,3 @@ void COM_CAN_loop(void)
         sendCanFrame_fifo(&canFrame_temp);
     }
 }
-

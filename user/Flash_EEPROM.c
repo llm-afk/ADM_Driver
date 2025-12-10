@@ -2,12 +2,15 @@
 #include "flash_eeprom.h"
 #include "canfd.h"
 #include "od.h"
+#include "encoder.h"
 
-eeprom_t eeprom;
+
+eeprom_t eeprom = {0};
 uint16_t eeprom_data_temp[ADDR_NUM] = {0}; // eeprom²ÁÐ´±¸·Ý»º³åÇø
 
 eeprom_item_t eeprom_item_list[] = {
-    {0, sizeof(ODObjs_t), &ODObjs},
+    {0, sizeof(ODObjs.node_id),                 &ODObjs.node_id},
+    {1, sizeof(encoder_config_t),               &encoder_config},
 };
 
 /**

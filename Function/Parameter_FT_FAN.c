@@ -83,7 +83,7 @@ unsigned int CBCCurPointInternal  =  ((long)HARDWARE_CBC_CUR  << 9) / MAX_PEAK_C
 ///////////////////////////////////////////////////////////////////////////////////////
 unsigned int MOTOR_RATED_POWER  =  2000;    //0.1W为单位
 unsigned int MOTOR_RATED_VOL    =  17;  //! 相电压的有效值，输入实际的母线电压/1.414
-unsigned int MOTOR_RATED_CUR    =  200; //! 20A的额定电流，这里是额定
+unsigned int MOTOR_RATED_CUR    =  300; //! 20A的额定电流，这里是额定
 unsigned int LOWER_LIMIT_FREQ   =  0;
 
 unsigned int PMSM_LD            =  270;//250;//30;//150;//432;          // 37uH
@@ -131,9 +131,9 @@ unsigned int HIGH_SPEED_KP_GAIN     =  10;
 ///////////////////////////////////////////////////////////////////////////////////////
 // 电流环环参数设置
 ///////////////////////////////////////////////////////////////////////////////////////
-unsigned int D_CUR_KI               =  70; // !
+unsigned int D_CUR_KI               =  80; // !
 unsigned int D_CUR_KP               =  0;  // !
-unsigned int Q_CUR_KI               =  70; // !
+unsigned int Q_CUR_KI               =  80; // !
 unsigned int Q_CUR_KP               =  0;  // !
 
 ///////////////////////////////////////////////////////////////////////////////////////
