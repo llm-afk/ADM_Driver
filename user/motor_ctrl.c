@@ -68,12 +68,14 @@ void servo_loop(void)
             int32_t degree_err_q14 = motor_ctrl.degree_ref_q14 - encoder.degree_q14;
             int32_t velocity_err_q14 = motor_ctrl.velocity_ref_q14 - encoder.velocity_q14;
 
-            int32_t out = (int32_t)(((int64_t)motor_ctrl.Kp_q14 * degree_err_q14) >> 14) + (int32_t)(((int64_t)motor_ctrl.Kd_q14 * velocity_err_q14) >> 14) + motor_ctrl.current_ref_q14;
+            int32_t out = (int32_t)(((int64_t)motor_ctrl.Kp_q14 * degree_err_q14) >> 14) \
+                        + (int32_t)(((int64_t)motor_ctrl.Kd_q14 * velocity_err_q14) >> 14) \
+                        + (motor_ctrl.current_ref_q14 * 40960 / MOTOR_RATED_CUR);
 
             out = CLAMP(out, -67108864, 67108864);
             
-            // Iq = out >> 14; 
-            // Id = 0;
+            Iq = out >> 14; 
+            Id = 0;
             break;
         }
         case ENCODER_CALIBRATE: 

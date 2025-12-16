@@ -239,11 +239,11 @@ static void parse_frame(canFrame_t *frame)
                 frame->len = 20; 
                 *(uint16_t*)&frame->data[8] = ODObjs.error_code;
             }
-            // *(float*)&frame->data[0] = (float)encoder.position_q12_gear / 4096.0f; // 减速端位置反馈(rad)
-            // *(float*)&frame->data[2] = (float)encoder.velocity_q12_gear / 4096.0f; // 减速端速度反馈(rad/s)
-            // *(float*)&frame->data[4] = (float)gIMT.T * MOTOR_RATED_CUR  / 40960.0f; // 力矩(N/m)
-            *(float*)&frame->data[0] = (float)encoder.degree_q14 / 16484.0f; // 减速端位置反馈(rad)
-            *(float*)&frame->data[2] = (float)encoder.velocity_q14 / 16484.0f; // 减速端速度反馈(rad/s)
+            // *(float*)&frame->data[0] = (float)encoder.degree_q14 / 16384.0f; // 减速端位置反馈(rad)
+            // *(float*)&frame->data[2] = (float)encoder.velocity_q14 / 16384.0f; // 减速端速度反馈(rad/s)
+            // *(float*)&frame->data[4] = (float)gIMT.T * MOTOR_RATED_CUR / 40960.0f; // 力矩(N/m)
+            *(float*)&frame->data[0] = (float)encoder.degree_q14 / 16384.0f; // 减速端位置反馈(rad)
+            *(float*)&frame->data[2] = (float)encoder.velocity_q14 / 16384.0f; // 减速端速度反馈(rad/s)
             *(float*)&frame->data[4] = (float)gIMT.T * MOTOR_RATED_CUR / 40960.0f; // 力矩(N/m)
             frame->data[6] = (int16_t)123; // 电机温度 (0.1°)
             frame->data[7] = (int16_t)456; // 驱动器温度 (0.1°)

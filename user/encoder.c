@@ -16,7 +16,7 @@ encoder_t encoder = {0};
 #pragma CODE_SECTION(encoder_loop,"ramfuncs");
 void encoder_loop(void)
 {
-    // 获取主编码器原始值
+    // 更新编码器角度
     encoder.enc_degree_raw = get_main_degree_raw();
 
     // 修正旋转方向
@@ -45,16 +45,16 @@ void encoder_loop(void)
 
     degree_last = encoder.enc_degree_lined;
 
-    // 更新速度
+    // 更新编码器速度
     // enc_velocity_q14 = delta / ENCODER_CPR * 2pi * 20000 * 2^14 (rad/s)
     static int32_t velocity_temp = 0;
-    encoder.enc_velocity_q14 = (velocity_temp += (delta * 125664 - velocity_temp) >> 6); // 右移越大滤波越强
+    encoder.enc_velocity_q14 = (velocity_temp += (delta * 125664 - velocity_temp) >> 8); // 右移越大滤波越强
 
     // 更新电角度
     if(motor_ctrl.state == MIT)
     {
-        // encoder.enc_degree_lined % 2048 * 8
-        encoder.elec_degree = ((encoder.enc_degree_lined & 0x7FF) << 3) - encoder_config.elec_degree_calib;
+        // encoder.enc_degree_lined % 2048 * 8 * 4
+        encoder.elec_degree = (((encoder.enc_degree_lined & 0x7FF) << 3) - encoder_config.elec_degree_calib) << 2; // 归一化到u16
     }
 }
 

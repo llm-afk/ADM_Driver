@@ -26,8 +26,8 @@ typedef struct {
     int32_t degree_ref_q14;   // 输出端目标角度 rad
     int32_t velocity_ref_q14; // 输出端目标速度 rad/s
     int32_t current_ref_q14;  // mit前馈电流 A
-    int32_t Kp_q14;           // mit_kp 0.01
-    int32_t Kd_q14;           // mit_kd 0.01
+    uint32_t Kp_q14;          // mit_kp 0.01
+    uint32_t Kd_q14;          // mit_kd 0.01
 
     int32_t board_temp_q14;   // 驱动器温度
     int32_t motor_temp_q14;   // 电机温度
