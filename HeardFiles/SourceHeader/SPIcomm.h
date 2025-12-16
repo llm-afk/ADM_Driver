@@ -6,9 +6,7 @@
 #include "ADP32F03x_Device.h"
 #include "MainInclude.h"
 
-extern void InitSpi(void);
-extern void InitSpiIO(void);
-extern Uint16 SPITransfer(Uint16 data);
+void InitSpi(void);
 uint16_t get_main_degree_raw(void);
 uint16_t get_ex_degree_raw(void);
 

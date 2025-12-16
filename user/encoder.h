@@ -3,37 +3,38 @@
 
 #include "MainInclude.h"
 #include "SPIcomm.h"
+#include "motor_ctrl.h"
 
-#define GEAR_RATIO 18 // å‡é€Ÿå™¨ä¼ åŠ¨æ¯”
-#define GEAR_RATIO_INV (1.0f / GEAR_RATIO)
+#define ENCODER_BITS            (14)
+#define ENCODER_CPR             (1 << ENCODER_BITS)
+#define ENCODER_CPR_DIV         (ENCODER_CPR >> 1)
+
+#define GEAR_RATIO              (12) 
+#define GEAR_RATIO_INV          (1.0f / GEAR_RATIO)
+
+#define CALIB_TABLE_SIZE        (512) 
 
 typedef struct{
-    uint16_t elec_degree_calib;    
+    uint16_t elec_degree_calib; // µç½Ç¶ÈĞ£×¼Öµ
+    int16_t linearity_table[CALIB_TABLE_SIZE];  // ÏßĞÔ»¯²¹³¥±í
+    int16_t encoder_reverse; // ±àÂëÆ÷·½ÏòÎ»
 }encoder_config_t;
 
-
 typedef struct{
-    uint16_t main_encoder_raw;      // åŸå§‹ç¼–ç å™¨å€¼
-    uint16_t main_encoder_lined;    // çº¿æ€§åŒ–åçš„ç¼–ç å™¨å€¼
+    uint16_t enc_degree_raw;      // Ô­Ê¼±àÂëÆ÷Öµ
+    uint16_t enc_degree_lined;    // ÏßĞÔ»¯ºóµÄ±àÂëÆ÷Öµ
+    int32_t enc_turns;            // ±àÂëÆ÷¶ËÀÛ¼ÓÈ¦Êı
+    int32_t enc_velocity_q14;     // ±àÂëÆ÷¶ËËÙ¶È (rad/s)
     
-    // ç”µæœºç«¯å¤šåœˆä½ç½®ï¼ˆåœˆæ•°+åœˆå†…ä½ç½®ï¼‰
-    int32_t motor_turns;            // ç”µæœºç«¯åœˆæ•°ï¼ˆæ­£è´Ÿè¡¨ç¤ºæ–¹å‘ï¼‰
-    uint16_t motor_position;        // ç”µæœºç«¯åœˆå†…ä½ç½® 0-65535
+    int64_t degree_q14;           // ¼õËÙ¶Ë½Ç¶È (rad)
+    int32_t velocity_q14;         // ¼õËÙ¶ËËÙ¶È (rad/s)
 
-    // ç”µæœºç«¯é€Ÿåº¦
-    int32_t volacity_q12;           // ç”µæœºç«¯é€Ÿåº¦ Q12æ ¼å¼ (counts/sample)
-    int32_t _vel_acc;               // é€Ÿåº¦æ»¤æ³¢ç´¯åŠ å™¨
-
-    // å‡é€Ÿç«¯ä½ç½®å’Œé€Ÿåº¦
-    int32_t volacity_q12_gear;      // å‡é€Ÿç«¯é€Ÿåº¦ rad/s Q12
-    int32_t position_q12_gear;      // å‡é€Ÿç«¯ä½ç½® rad Q12
-
-    int16_t elec_degree;            // ç”µè§’åº¦
+    int16_t elec_degree;          // µç½Ç¶È
 }encoder_t;
 
 extern encoder_config_t encoder_config;
 extern encoder_t encoder;
-
 void encoder_loop(void);
+uint16_t encoder_calibrate(void);
 
 #endif

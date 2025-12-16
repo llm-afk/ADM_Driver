@@ -5,16 +5,8 @@ motor_ctrl_t motor_ctrl = {
     .state = INIT,    
 };
 
-extern long Iq;
-extern long Id;
-extern int RunSignal;
-
-/**
- * @brief 电机状态控制主循环
- * @note 放在stimer框架下2Khz循环执行
- */
-#pragma CODE_SECTION(servo_loop, "ramfuncs");
-void servo_loop(void)
+#pragma CODE_SECTION(MC_controlword_update, "ramfuncs");
+int MC_controlword_update(void)
 {
     switch(ODObjs.control_word & 0x00FF)
     {
@@ -48,6 +40,21 @@ void servo_loop(void)
             break;
         }
     }
+    ODObjs.control_word &= 0xFF00;
+    return 0;
+}
+
+/**
+ * @brief 电机状态控制主循环
+ * @note 放在stimer框架下2Khz循环执行
+ */
+#pragma CODE_SECTION(servo_loop, "ramfuncs");
+void servo_loop(void)
+{
+    // 更新减速端位置和速度
+    // encoder.degree_q14 = (encoder.enc_turns / GEAR_RATIO * 2pi * 2^14) + (encoder.enc_degree_lined / ENCODER_CPR / GEAR_RATIO * 2pi * 2^14) ;
+    encoder.degree_q14 = (encoder.enc_turns * 8580) + (((int32_t)encoder.enc_degree_lined * 8579) >> 14);
+    encoder.velocity_q14 = (int32_t)(encoder.enc_velocity_q14 * GEAR_RATIO_INV);
 
     switch(motor_ctrl.state)
     {
@@ -58,28 +65,23 @@ void servo_loop(void)
         }
         case MIT:
         {
-            encoder.position_q12_gear = (int32_t)((float)encoder.motor_turns * GEAR_RATIO_INV * TWO_PI * 4096.0f) + (int32_t)((float)encoder.motor_position * GEAR_RATIO_INV * TWO_PI * 4096.0f / 65536.0f + 0.5f);
+            int32_t degree_err_q14 = motor_ctrl.degree_ref_q14 - encoder.degree_q14;
+            int32_t velocity_err_q14 = motor_ctrl.velocity_ref_q14 - encoder.velocity_q14;
 
-            // encoder.volacity_q12_gear = (int32_t)(((float64)encoder.volacity_q12 / 4096.0) * TWO_PI / 65536.0 / GEAR_RATIO * 20000.0 * 4096.0 + 0.5);
-            encoder.volacity_q12_gear = (int32_t)((float32)encoder.volacity_q12 * 1.917476038208008f * GEAR_RATIO_INV + 0.5f); 
+            int32_t out = (int32_t)(((int64_t)motor_ctrl.Kp_q14 * degree_err_q14) >> 14) + (int32_t)(((int64_t)motor_ctrl.Kd_q14 * velocity_err_q14) >> 14) + motor_ctrl.current_ref_q14;
 
-            int32_t pos_err_q12 = motor_ctrl.position_ref_q12 - encoder.position_q12_gear; 
-            int32_t vol_err_q12 = motor_ctrl.velocity_ref_q12 - encoder.volacity_q12_gear;
-
-            pos_err_q12 = CLAMP(pos_err_q12, -514450,514450);
-            int32_t torque_q12 = (((int64_t)motor_ctrl.Kp_q12 * pos_err_q12) >> 12) + (((int64_t)motor_ctrl.Kd_q12 * vol_err_q12) >> 12) + (motor_ctrl.current_ref_q12 * 40960 / MOTOR_RATED_CUR);
-            torque_q12 = CLAMP(torque_q12, -33554432, 33554432);
-            int16_t torque = (int16_t)((torque_q12 + 2048) >> 12); 
-            torque = CLAMP(torque, -8192, 8192);
-
-            Iq = torque; 
-            Id = 0;
+            out = CLAMP(out, -67108864, 67108864);
+            
+            // Iq = out >> 14; 
+            // Id = 0;
             break;
         }
         case ENCODER_CALIBRATE: 
         {
-            
-
+            if(encoder_calibrate() == 1)
+            {
+                motor_ctrl.state = MIT;
+            }
             break;
         }
         case ENCODER_ZERO: 

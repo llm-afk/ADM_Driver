@@ -1,41 +1,178 @@
 #include "encoder.h"
+#include "flash_eeprom.h"
 
 encoder_config_t encoder_config = {
-    .elec_degree_calib = 63472,
+    .elec_degree_calib = 13440,
+    .linearity_table = {0},
+    .encoder_reverse = 0,
 };
 
 encoder_t encoder = {0};
 
 /**
- * @brief ç¼–ç å™¨æ•°æ®æ›´æ–°loop
- * @note æ”¾åœ¨ç”µè§’åº¦çš„20Khzä¸­æ–­é‡Œæ‰§è¡Œ
+ * @brief ±àÂëÆ÷Êý¾Ý¸üÐÂÑ­»·
+ * @note ÔÚµç½Ç¶ÈµÄ 20kHz ÖÐ¶ÏÖÐÖ´ÐÐ
  */
 #pragma CODE_SECTION(encoder_loop,"ramfuncs");
 void encoder_loop(void)
 {
-    // è¯»å–ç¼–ç å™¨åŽŸå§‹å€¼
-    encoder.main_encoder_raw = get_main_degree_raw();
+    // »ñÈ¡Ö÷±àÂëÆ÷Ô­Ê¼Öµ
+    encoder.enc_degree_raw = get_main_degree_raw();
 
-    // çº¿æ€§åŒ–å¤„ç†
-    encoder.main_encoder_lined = encoder.main_encoder_raw; 
+    // ÐÞÕýÐý×ª·½Ïò
+    if(encoder_config.encoder_reverse)
+    {
+        encoder.enc_degree_raw = ENCODER_CPR - encoder.enc_degree_raw;
+    }
 
-    // ç»´æŠ¤å¤šåœˆè®¡æ•°ï¼ˆåœˆæ•°+åœˆå†…ä½ç½®ï¼‰
-    static uint16_t last_position = 0;
-    int16_t delta = (int16_t)(encoder.main_encoder_lined - last_position);
+    // ÏßÐÔ²¹³¥
+    encoder.enc_degree_lined = encoder.enc_degree_raw; 
+
+    // Î¬»¤¶àÈ¦ÀÛ¼ÆÖµ
+    static uint16_t degree_last = 0;
+    int16_t delta = (int16_t)(encoder.enc_degree_lined - degree_last);
     
-    // æ£€æµ‹è¿‡é›¶ç‚¹ï¼Œæ›´æ–°åœˆæ•°
-    int32_t delta_32 = (int32_t)((int32_t)encoder.main_encoder_lined - (int32_t)last_position);
-    if(delta_32 > 32767) encoder.motor_turns--;
-    else if(delta_32 < -32767) encoder.motor_turns++;
+    if(delta > ENCODER_CPR_DIV) 
+    {
+        encoder.enc_turns--;
+        delta -= ENCODER_CPR; 
+    }
+    else if(delta < -ENCODER_CPR_DIV) 
+    {
+        encoder.enc_turns++;
+        delta += ENCODER_CPR; 
+    }
 
-    last_position = encoder.main_encoder_lined;
-    
-    // æ›´æ–°åœˆå†…ä½ç½®
-    encoder.motor_position = encoder.main_encoder_lined;
+    degree_last = encoder.enc_degree_lined;
 
-    // æ›´æ–°é€Ÿåº¦ï¼ˆQ12æ ¼å¼ï¼Œä¸€é˜¶ä½Žé€šæ»¤æ³¢ï¼‰
-    encoder.volacity_q12 = (((encoder._vel_acc += (((int32_t)delta << 18) - encoder._vel_acc + 32) >> 6)) + 32) >> 6;
+    // ¸üÐÂËÙ¶È
+    // enc_velocity_q14 = delta / ENCODER_CPR * 2pi * 20000 * 2^14 (rad/s)
+    static int32_t velocity_temp = 0;
+    encoder.enc_velocity_q14 = (velocity_temp += (delta * 125664 - velocity_temp) >> 6); // ÓÒÒÆÔ½´óÂË²¨Ô½Ç¿
 
-    // æ›´æ–°ç”µè§’åº¦
-    encoder.elec_degree = ((encoder.main_encoder_lined & 0x1FFF) << 3) - encoder_config.elec_degree_calib;
+    // ¸üÐÂµç½Ç¶È
+    if(motor_ctrl.state == MIT)
+    {
+        // encoder.enc_degree_lined % 2048 * 8
+        encoder.elec_degree = ((encoder.enc_degree_lined & 0x7FF) << 3) - encoder_config.elec_degree_calib;
+    }
+}
+
+/**
+ * @brief 2khz±àÂëÆ÷Ð£×¼³ÌÐò
+ * @return 0 Î´Íê³É 1 Íê³É
+ */
+uint16_t encoder_calibrate(void)
+{
+    // encoder.calibrate.cnt++;
+    // switch(encoder.calibrate.state)
+    // {
+    //     case 0: // lock
+    //     {
+    //         Iq = 0;
+    //         Id = 1024; 
+    //         encoder.elec_degree = 0;
+
+    //         if(encoder.calibrate.cnt > 1000)
+    //         {
+    //             encoder.calibrate.cnt = 0;
+    //             encoder.calibrate.state = 1;
+    //             encoder.calibrate.count_raw_start = encoder.main_encoder_raw;
+    //         }
+    //         break;
+    //     }
+    //     case 1: // cw find direction
+    //     {
+    //         if(encoder.calibrate.cnt > 1024) // Ë³Ê±ÕëÐý×ª2¸öµçÖÜÆÚ
+    //         {
+    //             int32_t diff = encoder.main_encoder_raw - encoder.calibrate.count_raw_start;
+    //             if(diff > 32768)       
+    //             {
+    //                 diff -= 65536;     
+    //             }
+    //             else if(diff < -32768) 
+    //             {
+    //                 diff += 65536;  
+    //             }
+    //             if(diff < 0) 
+    //             {
+    //                 if(encoder_config.encoder_reverse) 
+    //                 {
+    //                     encoder_config.encoder_reverse = 0;
+    //                 } 
+    //                 else
+    //                 {
+    //                     encoder_config.encoder_reverse = 1;
+    //                 }
+    //             }
+    //             encoder.calibrate.cnt = 0;
+    //             encoder.calibrate.state = 2;
+    //             break;
+    //         }
+    //         encoder.elec_degree += 128;
+    //         break;
+    //     }
+    //     case 2: // cw dummy
+    //     {
+    //         if(encoder.calibrate.cnt > 1024) // Ë³Ê±ÕëÐý×ª2¸öµçÖÜÆÚ
+    //         {
+    //             encoder.calibrate.cnt = 0;
+    //             encoder.calibrate.state = 3;
+    //             break;
+    //         }
+    //         encoder.elec_degree += 128;
+    //         break;
+    //     }
+    //     case 3: // cw loop
+    //     {
+    //         encoder.calibrate.cnt = 0;
+    //         encoder.calibrate.state = 4;
+    //         break;
+    //     }
+    //     case 4: // cw dummy
+    //     {
+    //         if(encoder.calibrate.cnt > 1024) // Ë³Ê±ÕëÐý×ª2¸öµçÖÜÆÚ
+    //         {
+    //             encoder.calibrate.cnt = 0;
+    //             encoder.calibrate.state = 5;
+    //             break;
+    //         }
+    //         encoder.elec_degree += 128;
+    //         break;
+    //     }
+    //     case 5: // ccw dummy
+    //     {
+    //         if(encoder.calibrate.cnt > 1024) // ÄæÊ±ÕëÐý×ª2¸öµçÖÜÆÚ
+    //         {
+    //             encoder.calibrate.cnt = 0;
+    //             encoder.calibrate.state = 6;
+    //             break;
+    //         }
+    //         encoder.elec_degree -= 128;
+    //         break;
+    //     }
+    //     case 6: // ccw loop
+    //     {
+    //         if(encoder.calibrate.cnt > 10240) 
+    //         {
+    //             encoder.calibrate.cnt = 0;
+    //             encoder.calibrate.state = 7;
+    //             break;
+    //         }
+    //         break;
+    //     }
+    //     case 7: // calculate 
+    //     {
+
+
+    //         encoder.calibrate.cnt = 0;
+    //         encoder.calibrate.state = 0;
+    //         return 1; // Ð£×¼Íê³É
+    //     }
+    //     default:
+    //     {
+    //         break;
+    //     }
+    // }
+    return 0; // Ð£×¼ÖÐ
 }

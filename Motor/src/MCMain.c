@@ -1742,17 +1742,16 @@ void MotorControlISR()
 #endif
     ChangeCurrent();
 
-    {
-        // 对电流回采数据iq和id定点一阶低通滤波处理
-        static int32_t M_q12 = 0, T_q12 = 0;
+    // {
+    //     // 对电流回采数据iq和id定点一阶低通滤波处理
+    //     static int32_t M_q12 = 0, T_q12 = 0;
+        
+    //     M_q12 += (((int32_t)gIMT.M << 12) - M_q12) >> 4;
+    //     T_q12 += (((int32_t)gIMT.T << 12) - T_q12) >> 4;
 
-        M_q12 += (((int32_t)gIMT.M << 12) - M_q12) >> 6;
-        T_q12 += (((int32_t)gIMT.T << 12) - T_q12) >> 6;
-
-        gIMT.M = (int16_t)((M_q12 + 2048) >> 12);
-        gIMT.T = (int16_t)((T_q12 + 2048) >> 12);
-    }
-
+    //     gIMT.M = (int16_t)((M_q12 + 2048) >> 12);
+    //     gIMT.T = (int16_t)((T_q12 + 2048) >> 12);
+    // }
 
     if (gMainCmd.Command.bit.Start == TRUE)
     {

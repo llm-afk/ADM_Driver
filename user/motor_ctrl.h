@@ -23,19 +23,21 @@ typedef enum{
 typedef struct {
     motor_mode_t state;   // 控制模式状态
 
-    int32_t position_ref_q12; // 输出端目标角度 rad q12
-    int32_t velocity_ref_q12; // 输出端目标速度 rad/s q12
-    int32_t current_ref_q12;  // mit前馈电流 A q12
-    uint32_t Kp_q12;          // mit_kp 0.01
-    uint32_t Kd_q12;          // mit_kd 0.01
+    int32_t degree_ref_q14;   // 输出端目标角度 rad
+    int32_t velocity_ref_q14; // 输出端目标速度 rad/s
+    int32_t current_ref_q14;  // mit前馈电流 A
+    int32_t Kp_q14;           // mit_kp 0.01
+    int32_t Kd_q14;           // mit_kd 0.01
 
-    int32_t board_temp_q12;   // 驱动器温度
-    int32_t motor_temp_q12;   // 电机温度
+    int32_t board_temp_q14;   // 驱动器温度
+    int32_t motor_temp_q14;   // 电机温度
 }motor_ctrl_t;
 
 extern motor_ctrl_t motor_ctrl;
 
 void servo_loop(void);
 void info_collect_loop(void);
+
+int MC_controlword_update(void);
 
 #endif

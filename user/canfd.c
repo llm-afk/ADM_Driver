@@ -225,11 +225,11 @@ static void parse_frame(canFrame_t *frame)
         case MSG_ID_RPDO_5:
         {
             // 数据解析
-            motor_ctrl.position_ref_q12 = (int32_t)(*(float*)&frame->data[0] * 4096.0f); 
-            motor_ctrl.velocity_ref_q12 = (int32_t)(*(float*)&frame->data[2] * 4096.0f); 
-            motor_ctrl.current_ref_q12  = (int32_t)(*(float*)&frame->data[4] * 4096.0f); 
-            motor_ctrl.Kp_q12           = (uint32_t)(*(uint16_t*)&frame->data[6]) * 41; // q12格式缩放100倍
-            motor_ctrl.Kd_q12           = (uint32_t)(*(uint16_t*)&frame->data[7]) * 41; // q12格式缩放100倍
+            motor_ctrl.degree_ref_q14   = (int32_t)(*(float*)&frame->data[0] * 16384.0f); 
+            motor_ctrl.velocity_ref_q14 = (int32_t)(*(float*)&frame->data[2] * 16384.0f); 
+            motor_ctrl.current_ref_q14  = (int32_t)(*(float*)&frame->data[4] * 16384.0f); 
+            motor_ctrl.Kp_q14           = (uint32_t)(*(uint16_t*)&frame->data[6]) * 164; // q14格式缩放100倍
+            motor_ctrl.Kd_q14           = (uint32_t)(*(uint16_t*)&frame->data[7]) * 164; // q14格式缩放100倍
 
             // 数据上报
             frame->id = MSG_ID_TPDO_5 + ODObjs.node_id;    
@@ -239,9 +239,12 @@ static void parse_frame(canFrame_t *frame)
                 frame->len = 20; 
                 *(uint16_t*)&frame->data[8] = ODObjs.error_code;
             }
-            *(float*)&frame->data[0] = (float)encoder.position_q12_gear / 4096.0f; // 减速端位置反馈(rad)
-            *(float*)&frame->data[2] = (float)encoder.volacity_q12_gear / 4096.0f; // 减速端速度反馈(rad/s)
-            *(float*)&frame->data[4] = (float)gIMT.T * MOTOR_RATED_CUR  / 40960.0f; // 力矩(N/m)
+            // *(float*)&frame->data[0] = (float)encoder.position_q12_gear / 4096.0f; // 减速端位置反馈(rad)
+            // *(float*)&frame->data[2] = (float)encoder.velocity_q12_gear / 4096.0f; // 减速端速度反馈(rad/s)
+            // *(float*)&frame->data[4] = (float)gIMT.T * MOTOR_RATED_CUR  / 40960.0f; // 力矩(N/m)
+            *(float*)&frame->data[0] = (float)encoder.degree_q14 / 16484.0f; // 减速端位置反馈(rad)
+            *(float*)&frame->data[2] = (float)encoder.velocity_q14 / 16484.0f; // 减速端速度反馈(rad/s)
+            *(float*)&frame->data[4] = (float)gIMT.T * MOTOR_RATED_CUR / 40960.0f; // 力矩(N/m)
             frame->data[6] = (int16_t)123; // 电机温度 (0.1°)
             frame->data[7] = (int16_t)456; // 驱动器温度 (0.1°)
             enqueue_tx_frame(frame);

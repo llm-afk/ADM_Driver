@@ -5,6 +5,44 @@
 #include "AngleSensor.h"
 #include "encoder.h"
 
+#define CS_MAIN_EN()      (GpioDataRegs.GPACLEAR.bit.GPIO19 = 1)
+#define CS_MAIN_DIS()     (GpioDataRegs.GPASET.bit.GPIO19 = 1)
+
+#define CS_EX_EN()      (GpioDataRegs.GPACLEAR.bit.GPIO29 = 1)
+#define CS_EX_DIS()     (GpioDataRegs.GPASET.bit.GPIO29 = 1)
+
+void InitSpiIO(void)
+{
+    EALLOW;
+
+    GpioCtrlRegs.GPAPUD.bit.GPIO16 = 0;   // Enable pull-up on GPIO16 (SPISIMOA)
+    GpioCtrlRegs.GPAPUD.bit.GPIO17 = 0;   // Enable pull-up on GPIO17 (SPISOMIA)
+    GpioCtrlRegs.GPAPUD.bit.GPIO18 = 0;   // Enable pull-up on GPIO18 (SPICLKA)
+    GpioCtrlRegs.GPAPUD.bit.GPIO19 = 0;   // Enable pull-up on GPIO19 (SPISTEA)
+    GpioCtrlRegs.GPAPUD.bit.GPIO29 = 0;   // ex_cs
+
+
+    GpioCtrlRegs.GPAQSEL2.bit.GPIO16 = 3; // Asynch input GPIO16 (SPISIMOA)
+    GpioCtrlRegs.GPAQSEL2.bit.GPIO17 = 3; // Asynch input GPIO17 (SPISOMIA)
+    GpioCtrlRegs.GPAQSEL2.bit.GPIO18 = 3; // Asynch input GPIO18 (SPICLKA)
+    GpioCtrlRegs.GPAQSEL2.bit.GPIO19 = 3; // Asynch input GPIO19 (SPISTEA)
+    GpioCtrlRegs.GPAQSEL2.bit.GPIO29 = 3;
+
+    GpioCtrlRegs.GPAMUX2.bit.GPIO16 = 1; // Configure GPIO16 as SPISIMOA
+    GpioCtrlRegs.GPAMUX2.bit.GPIO17 = 1; // Configure GPIO17 as SPISOMIA
+    GpioCtrlRegs.GPAMUX2.bit.GPIO18 = 1; // Configure GPIO18 as SPICLKA
+    GpioCtrlRegs.GPAMUX2.bit.GPIO19 = 0; // Configure GPIO19 as SPISTEA
+    GpioCtrlRegs.GPAMUX2.bit.GPIO29 = 0;
+
+    GpioCtrlRegs.GPADIR.bit.GPIO19 = 1; // ca_main设置为输出
+    GpioCtrlRegs.GPADIR.bit.GPIO29 = 1; // ca_main设置为输出
+
+    CS_MAIN_DIS();
+    CS_EX_DIS();
+
+    EDIS;
+}
+
 void InitSpi(void)
 {
     InitSpiIO();
@@ -26,62 +64,49 @@ void InitSpi(void)
     EDIS;
 }
 
-void InitSpiIO(void)
+#pragma CODE_SECTION(SPITransfer_main,"ramfuncs");
+Uint16 SPITransfer_main(Uint16 data)
 {
-    EALLOW;
-
-    GpioCtrlRegs.GPAPUD.bit.GPIO16 = 0;   // Enable pull-up on GPIO16 (SPISIMOA)
-    GpioCtrlRegs.GPAPUD.bit.GPIO17 = 0;   // Enable pull-up on GPIO17 (SPISOMIA)
-    GpioCtrlRegs.GPAPUD.bit.GPIO18 = 0;   // Enable pull-up on GPIO18 (SPICLKA)
-    GpioCtrlRegs.GPAPUD.bit.GPIO19 = 0;   // Enable pull-up on GPIO19 (SPISTEA)
-
-    GpioCtrlRegs.GPAQSEL2.bit.GPIO16 = 3; // Asynch input GPIO16 (SPISIMOA)
-    GpioCtrlRegs.GPAQSEL2.bit.GPIO17 = 3; // Asynch input GPIO17 (SPISOMIA)
-    GpioCtrlRegs.GPAQSEL2.bit.GPIO18 = 3; // Asynch input GPIO18 (SPICLKA)
-    GpioCtrlRegs.GPAQSEL2.bit.GPIO19 = 3; // Asynch input GPIO19 (SPISTEA)
-
-    GpioCtrlRegs.GPAMUX2.bit.GPIO16 = 1; // Configure GPIO16 as SPISIMOA
-    GpioCtrlRegs.GPAMUX2.bit.GPIO17 = 1; // Configure GPIO17 as SPISOMIA
-    GpioCtrlRegs.GPAMUX2.bit.GPIO18 = 1; // Configure GPIO18 as SPICLKA
-    GpioCtrlRegs.GPAMUX2.bit.GPIO19 = 1; // Configure GPIO19 as SPISTEA
-
-    EDIS;
-}
-
-/**
- * @brief spi交换16bit数据的函数
- * @param data 发送的16bit数据
- * @return 换回来的16bit数据
- */
-#pragma CODE_SECTION(SPITransfer,"ramfuncs");
-Uint16 SPITransfer(Uint16 data)
-{
+    CS_MAIN_EN();
     while(SpiaRegs.SPISTS.bit.BUFFULL_FLAG == 1);
     SpiaRegs.SPITXBUF = data;
     while(SpiaRegs.SPISTS.bit.INT_FLAG == 0);
+    CS_MAIN_DIS();
     return SpiaRegs.SPIRXBUF;
 }
 
+#pragma CODE_SECTION(SPITransfer_ex,"ramfuncs");
+Uint16 SPITransfer_ex(Uint16 data)
+{
+    CS_EX_EN();
+    while(SpiaRegs.SPISTS.bit.BUFFULL_FLAG == 1);
+    SpiaRegs.SPITXBUF = data;
+    while(SpiaRegs.SPISTS.bit.INT_FLAG == 0);
+    CS_EX_DIS();
+    return SpiaRegs.SPIRXBUF;
+}
+
+
 /**
- * @brief 获取主编码器的原始角度u16
+ * @brief 获取主编码器的原始值
  */
 #pragma CODE_SECTION(get_main_degree_raw,"ramfuncs");
 uint16_t get_main_degree_raw(void)
 {
-    uint16_t h_data = SPITransfer(0x8300); // 获取主编码器03寄存器的高8位值
-    uint16_t l_data = SPITransfer(0x8400); // 获取主编码器04寄存器的低6位值
-    return (((((h_data & 0x00FF) << 8) | (l_data & 0x00FF)) >> 2) << 2);
+    uint16_t h_data = SPITransfer_main(0x8300); // 获取主编码器03寄存器的高8位值
+    uint16_t l_data = SPITransfer_main(0x8400); // 获取主编码器04寄存器的低6位值
+    return ((((h_data & 0x00FF) << 8) | (l_data & 0x00FF)) >> 2);
 }
 
 /**
- * @brief 获取副编码器的原始角度u16
+ * @brief 获取副编码器的原始角度
  */
 #pragma CODE_SECTION(get_ex_degree_raw,"ramfuncs");
 uint16_t get_ex_degree_raw(void)
 {
-    // uint16_t h_data = SPITransfer(0x8300); // 获取主编码器03寄存器的高8位值
-    // uint16_t l_data = SPITransfer(0x8400); // 获取主编码器04寄存器的低6位值
-    // return (((((h_data & 0x00FF) << 8) | (l_data & 0x00FF)) >> 2) << 2);
+    uint16_t h_data = SPITransfer_ex(0x8300); // 获取主编码器03寄存器的高8位值
+    uint16_t l_data = SPITransfer_ex(0x8400); // 获取主编码器04寄存器的低6位值
+    return (16384 - ((((h_data & 0x00FF) << 8) | (l_data & 0x00FF)) >> 2));
 }
 
 
