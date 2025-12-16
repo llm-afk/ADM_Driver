@@ -55,6 +55,7 @@ void servo_loop(void)
     // encoder.degree_q14 = (encoder.enc_turns / GEAR_RATIO * 2pi * 2^14) + (encoder.enc_degree_lined / ENCODER_CPR / GEAR_RATIO * 2pi * 2^14) ;
     encoder.degree_q14 = (encoder.enc_turns * 8580) + (((int32_t)encoder.enc_degree_lined * 8579) >> 14);
     encoder.velocity_q14 = (int32_t)(encoder.enc_velocity_q14 * GEAR_RATIO_INV);
+    
 
     switch(motor_ctrl.state)
     {
