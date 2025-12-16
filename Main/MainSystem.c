@@ -8,8 +8,15 @@
 #include "canfd.h"
 #include "od.h"
 #include "iap.h"
+#include "encoder.h"
+#include "motor_ctrl.h"
 
-stimer_t stimer_main; // 主函数用软定时器模块
+stimer_t stimer_main;
+
+#define DEBUG 0
+#if(DEBUG == 1)
+int32_t debug_buffer[2000] = {0};
+#endif
 
 void main(void)
 {
@@ -29,16 +36,16 @@ void main(void)
     load_eeprom_to_ram(); // 初始化参数
 
     canfd_init(); // 根据eeprom参数初始化canfd
-    
+
     stimer_init(&stimer_main);
     stimer_addTask(&stimer_main, 0, 1, 0, KickDog);
-    stimer_addTask(&stimer_main, 1, 1, 0, SystemLeve05msMotor);
-    stimer_addTask(&stimer_main, 2, 1, 0, SystemLeve05msFunction);
-    stimer_addTask(&stimer_main, 3, 4, 0, SystemLeve2msMotor);
-    stimer_addTask(&stimer_main, 4, 4, 2, SystemLeve2msFunction);
-    stimer_addTask(&stimer_main, 5, 1, 0, COM_CAN_loop);
-
-
+    stimer_addTask(&stimer_main, 1, 1, 0, servo_loop);
+    stimer_addTask(&stimer_main, 2, 1, 0, can_com_loop);
+    stimer_addTask(&stimer_main, 3, 2, 1, info_collect_loop);
+    stimer_addTask(&stimer_main, 4, 1, 0, SystemLeve05msMotor);
+    stimer_addTask(&stimer_main, 5, 1, 0, SystemLeve05msFunction);
+    stimer_addTask(&stimer_main, 6, 4, 0, SystemLeve2msMotor);
+    stimer_addTask(&stimer_main, 7, 4, 2, SystemLeve2msFunction);
     
     while(1)
     {
@@ -62,7 +69,7 @@ interrupt void ZeroOfEPWMISR(void)
     // 电流环计算
     EPwm2Regs.ETCLR.bit.INT = 1;
     EINT;
-    AngleCal();
+    encoder_loop();
     ADCOverInterrupt();
     DINT;
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP3; // Acknowledge this interrupt
@@ -74,6 +81,13 @@ interrupt void ZeroOfEPWMISR(void)
         stimer_main_cnt = 0;
         stimer_heartbeat(&stimer_main); // 2Khz的心跳频率
     }
+
+    #if(DEBUG == 1)
+    static uint16_t cnt = 0;
+    debug_buffer[cnt] = 0;
+    cnt++;
+    cnt%=2000;
+    #endif
 }
 
 /***************************************************************
@@ -90,4 +104,3 @@ interrupt void OneShotTZOfEPWMISR(void)
     HardWareErrorDeal();                    // 处理硬件故障－电机控制模块处理
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP2; // Acknowledge this interrupt
 }
-

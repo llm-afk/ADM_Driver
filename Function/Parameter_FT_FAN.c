@@ -68,7 +68,7 @@ unsigned int  OVER_DC_VOL_KP      =  800;
 unsigned int MaxAllowUdcLimit     =  170;
 unsigned int MidAllowUdcLimit     =  155;
 
-#define DEAD_TIME                    80          // 设置死区时间，实际的上下管的死区时间是 DEAD_TIME+20 单位0.01us
+#define DEAD_TIME                    20          // 设置死区时间，实际的上下管的死区时间是 DEAD_TIME+20 单位0.01us
 #define DEAD_COMPENATION_TIME        0           // 死区补偿时间，0.25US
 unsigned int DeadTimeInternal     =  ((long)DEAD_TIME * DSP_CLOCK) / 100;               // 死区时间
 unsigned int DeadTimeCompInternal =  ((long)DEAD_COMPENATION_TIME * DSP_CLOCK) / 100;   // 死区补偿时间
@@ -83,7 +83,7 @@ unsigned int CBCCurPointInternal  =  ((long)HARDWARE_CBC_CUR  << 9) / MAX_PEAK_C
 ///////////////////////////////////////////////////////////////////////////////////////
 unsigned int MOTOR_RATED_POWER  =  2000;    //0.1W为单位
 unsigned int MOTOR_RATED_VOL    =  17;  //! 相电压的有效值，输入实际的母线电压/1.414
-unsigned int MOTOR_RATED_CUR    =  200; //! 20A的额定电流，这里是额定
+unsigned int MOTOR_RATED_CUR    =  300; //! 20A的额定电流，这里是额定
 unsigned int LOWER_LIMIT_FREQ   =  0;
 
 unsigned int PMSM_LD            =  270;//250;//30;//150;//432;          // 37uH
@@ -113,10 +113,10 @@ unsigned int BemfOffset             =  80;
 ///////////////////////////////////////////////////////////////////////////////////////
 // 频率和加减速参数设置
 ///////////////////////////////////////////////////////////////////////////////////////
-         int RefSet                 =  17000;   // 120.00HZ
+         int RefSet                 =  17000;  // 120.00HZ
 unsigned int ACC1                   =  200;    // 低速段加速时间 5.0S
 unsigned int ACC2                   =  200;    // 高速段加速时间 2.0S
-unsigned int DCBrakeTime            =  20;      // 直流制动时间   1.0S
+unsigned int DCBrakeTime            =  20;     // 直流制动时间   1.0S
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // 速度环参数设置
@@ -131,9 +131,9 @@ unsigned int HIGH_SPEED_KP_GAIN     =  10;
 ///////////////////////////////////////////////////////////////////////////////////////
 // 电流环环参数设置
 ///////////////////////////////////////////////////////////////////////////////////////
-unsigned int D_CUR_KI               =  70; // !
+unsigned int D_CUR_KI               =  80; // !
 unsigned int D_CUR_KP               =  0;  // !
-unsigned int Q_CUR_KI               =  70; // !
+unsigned int Q_CUR_KI               =  80; // !
 unsigned int Q_CUR_KP               =  0;  // !
 
 ///////////////////////////////////////////////////////////////////////////////////////

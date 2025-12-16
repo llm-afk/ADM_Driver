@@ -3,6 +3,7 @@
 
 #include "MainInclude.h"
 #include "canfd.h"
+#include "motor_ctrl.h"
 
 #define ATTR_R      0x01
 #define ATTR_W      0x02
@@ -11,7 +12,11 @@
 #define ATTR_RAM    0x08
 
 typedef struct {
+    uint16_t error_code;
+    uint16_t control_word;
     uint16_t node_id;
+    uint16_t in_encoder_offset;
+    uint16_t ex_encoder_offset;
 }ODObjs_t;
 
 extern ODObjs_t ODObjs;

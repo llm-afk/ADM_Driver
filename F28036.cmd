@@ -1,7 +1,7 @@
 MEMORY
 {
 PAGE 0 :
-   RAMPRG      : origin = 0x008000, length = 0x001000  
+   RAMPRG      : origin = 0x008000, length = 0x001400  
 
    APP_SPACE   : origin = 0x3E8000, length = 0x006000    
    CSM_RSVD    : origin = 0x3F7F80, length = 0x000076     
@@ -20,7 +20,7 @@ PAGE 0 :
 PAGE 1 :                                          
    RAMM0       : origin = 0x000100, length = 0x000300   
    RAMM1       : origin = 0x000400, length = 0x000400    
-   RAML0       : origin = 0x009000, length = 0x001000
+   RAML0       : origin = 0x009400, length = 0x000C00
    RAMH0       : origin = 0x00A000, length = 0x002000
 }
 
@@ -46,8 +46,8 @@ SECTIONS
    .econst             : > APP_SPACE    PAGE = 0 
    .switch             : > APP_SPACE    PAGE = 0
 
-   csmpasswds          : > CSM_PWL      PAGE = 0 
-   csm_rsvd            : > CSM_RSVD     PAGE = 0 
+   csmpasswds          : > CSM_PWL      PAGE = 0
+   csm_rsvd            : > CSM_RSVD     PAGE = 0
                                                
    .reset              : > RESET        PAGE = 0, TYPE = DSECT
    vectors             : > VECTORS      PAGE = 0, TYPE = DSECT

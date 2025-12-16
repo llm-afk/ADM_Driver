@@ -9,6 +9,7 @@
 #include "Reference.h"
 #include "PreDriver.h"
 #include "AngleSensor.h"
+#include "encoder.h"
 
 void ParameterChange(void);	
 void CalCarrierWaveFreq(void);
@@ -1714,7 +1715,7 @@ void calc_out_angle2()
     }
     else
     {
-        data1 = Degree.ElecDegree;//编码器角度 + 110 * 65535 / 360！！！
+        data1 = encoder.elec_degree;//编码器角度 + 110 * 65535 / 360！！！
     }
 
     data = data1 + pm_dq_angle;
@@ -1740,6 +1741,17 @@ void MotorControlISR()
     SVPWM_3ShuntGetPhaseCurrent();
 #endif
     ChangeCurrent();
+
+    // {
+    //     // 对电流回采数据iq和id定点一阶低通滤波处理
+    //     static int32_t M_q12 = 0, T_q12 = 0;
+        
+    //     M_q12 += (((int32_t)gIMT.M << 12) - M_q12) >> 4;
+    //     T_q12 += (((int32_t)gIMT.T << 12) - T_q12) >> 4;
+
+    //     gIMT.M = (int16_t)((M_q12 + 2048) >> 12);
+    //     gIMT.T = (int16_t)((T_q12 + 2048) >> 12);
+    // }
 
     if (gMainCmd.Command.bit.Start == TRUE)
     {

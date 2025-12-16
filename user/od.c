@@ -13,30 +13,51 @@ typedef struct {
 
 static const OD_entry_t ODList[] = 
 {
-    {0x2040, &ODObjs.node_id,                   1, ATTR_ROM | ATTR_RW, NULL},
+    {0x2000, &ODObjs.error_code,                2, ATTR_RAM | ATTR_R,  NULL},
+    {0x2002, &ODObjs.control_word,              2, ATTR_RAM | ATTR_RW, MC_controlword_update},
+    {0x2040, &ODObjs.node_id,                   1, ATTR_ROM | ATTR_RW, NULL},  
 };
 
 static void dictionary_init(void)
 {
+    ODObjs.error_code = 0;
+    ODObjs.control_word = 0;
     ODObjs.node_id = 1;
 }
+
+/**
+ * @brief 兼容我写的eeprom库的一个补丁吧算是
+ * @param idx od obj索引
+ * @return eeprom库key索引
+ * @note 所有注册在od字典对象中的有rom属性的变量都需要在这里多注册一遍
+ */
+static uint16_t get_eeprom_key_from_index(uint16_t idx)
+{
+    switch(idx)
+    {
+        case 0x2040: return 0;   // node_id
+        default: return 0xFF;    // 无效索引，返回错误标识
+    }
+}
+
+
 
 static OD_entry_t *find_entry(uint16_t index)
 {
     uint16_t min = 0;
     uint16_t max = ODObjsCount - 1;
 
-    while (min < max) 
+    while(min < max) 
     {
         uint16_t cur = (min + max) >> 1;
         OD_entry_t* entry = (OD_entry_t*)&ODList[cur];
 
-        if (index == entry->index) 
+        if(index == entry->index) 
         {
             return entry;
         }
 
-        if (index < entry->index) 
+        if(index < entry->index) 
         {
             max = (cur > 0) ? (cur - 1) : cur;
         } 
@@ -46,10 +67,10 @@ static OD_entry_t *find_entry(uint16_t index)
         }
     }
 
-    if (min == max) 
+    if(min == max) 
     {
         OD_entry_t* entry = (OD_entry_t*)&ODList[min];
-        if (index == entry->index) 
+        if(index == entry->index) 
         {
             return entry;
         }
@@ -117,7 +138,7 @@ uint16_t OD_write_1(uint16_t idx, uint16_t *data)
             __byte(entry->obj, 0) = __byte(data, 0);
             if(entry->attribute & ATTR_ROM)
             {
-                load_ram_item_to_eeprom_from_key(0);
+                load_ram_item_to_eeprom_from_key(get_eeprom_key_from_index(idx));
                 cs = CS_W_ACK;
             }
             else
@@ -156,7 +177,7 @@ uint16_t OD_write_2(uint16_t idx, uint16_t *data)
             *(uint16_t *)entry->obj = *(uint16_t *)data;
             if(entry->attribute & ATTR_ROM)
             {
-                load_ram_item_to_eeprom_from_key(0);
+                load_ram_item_to_eeprom_from_key(get_eeprom_key_from_index(idx));
                 cs = CS_W_ACK;
             }
             else
@@ -195,7 +216,7 @@ uint16_t OD_write_4(uint16_t idx, uint16_t *data)
             *(uint32_t *)entry->obj = *(uint32_t *)data;
             if(entry->attribute & ATTR_ROM)
             {
-                load_ram_item_to_eeprom_from_key(0);
+                load_ram_item_to_eeprom_from_key(get_eeprom_key_from_index(idx));
                 cs = CS_W_ACK;
             }
             else

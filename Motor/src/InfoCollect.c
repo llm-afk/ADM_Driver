@@ -119,7 +119,9 @@ void GetAIInfo(void)
     Uint m_Result = ADC_DSP_TEMP;
 
     // InternalTemperatureDegree = (ADC_DSP_TEMP - 1511) * 0.181;
+    static int16_t temp_last = 0;
     InternalTemperatureDegree = ((long)(ADC_DSP_TEMP - 1511) * 5931) >> 15;
+    
 }
 
 /****************************************************************

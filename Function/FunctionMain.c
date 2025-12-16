@@ -90,10 +90,7 @@ void InitForFunctionApp(void)
     InitFuncCode();
 
 	// 参数初始化
-    LinData_init();
     FuncVariableInit();
-
-    InitAngleSensor();
 }
 
 void InitFuncCode(void)

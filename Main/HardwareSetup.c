@@ -193,6 +193,7 @@ void InitFlash(void)
 //---------------------------------------------------------------------------
 // This function resets the watchdog timer.
 //---------------------------------------------------------------------------
+#pragma CODE_SECTION(KickDog, "ramfuncs");
 void KickDog(void)
 {
     EALLOW;

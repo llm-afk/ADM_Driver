@@ -44,5 +44,5 @@ extern PLL_STRUCT    PLL_Sensors;
 extern DEGREE_STRUCT Degree;
 
 void AngleCal(void);
-void InitAngleSensor(void);
+
 #endif /* HEARDFILES_SOURCEHEADER_ANGLESENSOR_H_ */

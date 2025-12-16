@@ -26,6 +26,11 @@ extern unsigned int gSendToFunctionDataBuff1[];
 	常数定义
 ************************************************************/
 
+extern long Iq;
+extern long Id;
+extern int RunSignal;
+extern long pm_ref_id;
+extern long pm_ref_iq;
 
 /************************************************************
 	引用函数说明
