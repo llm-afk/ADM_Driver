@@ -270,9 +270,7 @@ static void parse_frame(canFrame_t *frame)
                 {
                     *(uint32_t*)&frame->data[0] = 0xFFFFFFFF; // ack
                     sendCanFrame_fifo(frame); 
-
                     ADP32F03x_usDelay(1000);
-
                     jump_to_bootloader();
                 }
             }
