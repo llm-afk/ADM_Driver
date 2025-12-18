@@ -254,7 +254,7 @@ static void parse_frame(canFrame_t *frame)
         {
             if(frame->len == 4)
             {
-                if(*(uint32_t*)&frame->data[0] == 0xDDDDDDDD) 
+                if(*(uint32_t*)&frame->data[0] == 0xDDDDDDDD) // start
                 {
                     if(!clean_download())
                     {
@@ -273,7 +273,7 @@ static void parse_frame(canFrame_t *frame)
 
                     ADP32F03x_usDelay(1000);
 
-                    jump_to_download();
+                    jump_to_bootloader();
                 }
             }
             else

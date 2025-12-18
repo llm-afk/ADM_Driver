@@ -48,12 +48,12 @@ void encoder_loop(void)
     // 更新编码器速度
     // enc_velocity_q14 = delta / ENCODER_CPR * 2pi * 20000 * 2^14 (rad/s)
     static int32_t velocity_temp = 0;
-    encoder.enc_velocity_q14 = (velocity_temp += (delta * 125664 - velocity_temp) >> 8); // 右移越大滤波越强
+    encoder.enc_velocity_q14 = (velocity_temp += (delta * 125664 - velocity_temp) >> 6); // 右移越大滤波越强
 
     // 更新电角度
     if(motor_ctrl.state == MIT)
     {
-        // encoder.enc_degree_lined % 2048 * 8 * 4
+        // (encoder.enc_degree_lined % (ENCODER_CPR / 8)) * 8 * 4
         encoder.elec_degree = (((encoder.enc_degree_lined & 0x7FF) << 3) - encoder_config.elec_degree_calib) << 2; // 归一化到u16
     }
 }

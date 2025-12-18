@@ -56,7 +56,6 @@ void servo_loop(void)
     encoder.degree_q14 = (encoder.enc_turns * 8580) + (((int32_t)encoder.enc_degree_lined * 8579) >> 14);
     encoder.velocity_q14 = (int32_t)(encoder.enc_velocity_q14 * GEAR_RATIO_INV);
     
-
     switch(motor_ctrl.state)
     {
         case INIT:
@@ -73,7 +72,7 @@ void servo_loop(void)
                         + (int32_t)(((int64_t)motor_ctrl.Kd_q14 * velocity_err_q14) >> 14) \
                         + (motor_ctrl.current_ref_q14 * 40960 / MOTOR_RATED_CUR);
 
-            out = CLAMP(out, -67108864, 67108864);
+            out = CLAMP(out, -67108864, 67108864); // 4096 * 16384
             
             Iq = out >> 14; 
             Id = 0;

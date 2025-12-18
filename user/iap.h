@@ -17,7 +17,7 @@
 #if defined(APP)
 extern uint32_t addr_offset;
 uint16_t clean_download(void);
-void jump_to_download(void);
+void jump_to_bootloader(void);
 void write_iap_data(uint16_t *data);
 #else
 void bootloader(void);
