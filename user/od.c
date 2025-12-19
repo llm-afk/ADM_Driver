@@ -16,6 +16,7 @@ static const OD_entry_t ODList[] =
     {0x2000, &ODObjs.error_code,                2, ATTR_RAM | ATTR_R,  NULL},
     {0x2002, &ODObjs.control_word,              2, ATTR_RAM | ATTR_RW, MC_controlword_update},
     {0x2040, &ODObjs.node_id,                   1, ATTR_ROM | ATTR_RW, NULL},  
+    {0x2100, &ODObjs.firmware_version,          2, ATTR_RAM | ATTR_R,  NULL},
 };
 
 static void dictionary_init(void)
@@ -23,6 +24,7 @@ static void dictionary_init(void)
     ODObjs.error_code = 0;
     ODObjs.control_word = 0;
     ODObjs.node_id = 1;
+    ODObjs.firmware_version = 100; // 版本号
 }
 
 /**

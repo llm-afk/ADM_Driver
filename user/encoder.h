@@ -30,6 +30,10 @@ typedef struct{
     int32_t velocity_q14;         // 减速端速度 (rad/s)
 
     int16_t elec_degree;          // 电角度
+
+    uint16_t ex_enc_degree_raw;    
+    uint16_t ex_enc_degree_lined;   
+    
 }encoder_t;
 
 extern encoder_config_t encoder_config;

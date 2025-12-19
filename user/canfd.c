@@ -3,11 +3,12 @@
 #include "motor_ctrl.h"
 #include "MotorInclude.h"
 #include "encoder.h"
+#include "utils.h"
 
 ringbuffer_t canFrameRxRingbuffer = {0}; // 接收ringbuffer控制块
-uint16_t canFrameRxBuffer[512]   = {0}; // 接收ringbuffer缓冲区
+uint16_t canFrameRxBuffer[512]    = {0}; // 接收ringbuffer缓冲区
 ringbuffer_t canFrameTxRingbuffer = {0}; // 发送ringbuffer控制块
-uint16_t canFrameTxBuffer[512]   = {0}; // 发送ringbuffer缓冲区 
+uint16_t canFrameTxBuffer[512]    = {0}; // 发送ringbuffer缓冲区 
 
 /**
  * @brief 初始化canfd协议需要的环形缓冲区
@@ -228,8 +229,8 @@ static void parse_frame(canFrame_t *frame)
             motor_ctrl.degree_ref_q14   = (int32_t)(*(float*)&frame->data[0] * 16384.0f); 
             motor_ctrl.velocity_ref_q14 = (int32_t)(*(float*)&frame->data[2] * 16384.0f); 
             motor_ctrl.current_ref_q14  = (int32_t)(*(float*)&frame->data[4] * 16384.0f); 
-            motor_ctrl.Kp_q14           = (uint32_t)(*(uint16_t*)&frame->data[6]) * 164; // q14格式缩放100倍
-            motor_ctrl.Kd_q14           = (uint32_t)(*(uint16_t*)&frame->data[7]) * 164; // q14格式缩放100倍
+            motor_ctrl.Kp_q14           = ((uint32_t)(*(uint16_t*)&frame->data[6])) * 164; // q14格式缩放100倍
+            motor_ctrl.Kd_q14           = ((uint32_t)(*(uint16_t*)&frame->data[7])) * 164; // q14格式缩放100倍
 
             // 数据上报
             frame->id = MSG_ID_TPDO_5 + ODObjs.node_id;    
@@ -244,9 +245,9 @@ static void parse_frame(canFrame_t *frame)
             // *(float*)&frame->data[4] = (float)gIMT.T * MOTOR_RATED_CUR / 40960.0f; // 力矩(N/m)
             *(float*)&frame->data[0] = (float)encoder.degree_q14 / 16384.0f; // 减速端位置反馈(rad)
             *(float*)&frame->data[2] = (float)encoder.velocity_q14 / 16384.0f; // 减速端速度反馈(rad/s)
-            *(float*)&frame->data[4] = (float)gIMT.T * MOTOR_RATED_CUR / 40960.0f; // 力矩(N/m)
+            *(float*)&frame->data[4] = (float)(square(((uint64_t)(((int32_t)gIMT.M * gIMT.M) + ((int32_t)gIMT.T * gIMT.T))) << 16) >> 8) * (((gIMT.M + gIMT.T) >= 0) ? +1 : -1) * MOTOR_RATED_CUR / 40960.0f; // 电流(A)
             frame->data[6] = (int16_t)123; // 电机温度 (0.1°)
-            frame->data[7] = (int16_t)456; // 驱动器温度 (0.1°)
+            frame->data[7] = (int16_t)456; // 驱动器温度 (0.1°) 
             enqueue_tx_frame(frame);
             break;   
         }

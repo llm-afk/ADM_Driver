@@ -65,16 +65,16 @@ void servo_loop(void)
         }
         case MIT:
         {
-            int32_t degree_err_q14 = motor_ctrl.degree_ref_q14 - encoder.degree_q14;
-            int32_t velocity_err_q14 = motor_ctrl.velocity_ref_q14 - encoder.velocity_q14;
+            int64_t degree_err_q14 = motor_ctrl.degree_ref_q14 - encoder.degree_q14;
+            int64_t velocity_err_q14 = motor_ctrl.velocity_ref_q14 - encoder.velocity_q14;
 
-            int32_t out = (int32_t)(((int64_t)motor_ctrl.Kp_q14 * degree_err_q14) >> 14) \
-                        + (int32_t)(((int64_t)motor_ctrl.Kd_q14 * velocity_err_q14) >> 14) \
-                        + (motor_ctrl.current_ref_q14 * 40960 / MOTOR_RATED_CUR);
+            int32_t out_q14 = (int32_t)(((int64_t)motor_ctrl.Kp_q14 * degree_err_q14) >> 14) \
+                            + (int32_t)(((int64_t)motor_ctrl.Kd_q14 * velocity_err_q14) >> 14) \
+                            + (motor_ctrl.current_ref_q14 * 40960 / MOTOR_RATED_CUR);
 
-            out = CLAMP(out, -67108864, 67108864); // 4096 * 16384
+            out_q14 = CLAMP(out_q14, -67108864, 67108864); // 4096 * 16384
             
-            Iq = out >> 14; 
+            Iq = out_q14 >> 14; 
             Id = 0;
             break;
         }
