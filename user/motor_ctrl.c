@@ -68,6 +68,9 @@ void MC_servo_loop(void)
             int64_t degree_err_q14 = motor_ctrl.degree_ref_q14 - encoder.degree_q14;
             int64_t velocity_err_q14 = motor_ctrl.velocity_ref_q14 - encoder.velocity_q14;
 
+            degree_err_q14   = CLAMP(degree_err_q14,  -102944,  102944); // 解决位置目标值和实际值过大导致计算中间过程溢出导致反向转动的问题
+            velocity_err_q14 = CLAMP(velocity_err_q14,-1638400, 1638400);
+
             int32_t out_q14 = 0;
 
             if(encoder_config.encoder_reverse == 0)
@@ -78,11 +81,10 @@ void MC_servo_loop(void)
             }
             else
             {
-                out_q14 = -(int32_t)(((int64_t)motor_ctrl.Kp_q14 * degree_err_q14) >> 14) \
+                out_q14 =-(int32_t)(((int64_t)motor_ctrl.Kp_q14 * degree_err_q14) >> 14) \
                         - (int32_t)(((int64_t)motor_ctrl.Kd_q14 * velocity_err_q14) >> 14) \
                         - (motor_ctrl.current_ref_q14 * 40960 / MOTOR_RATED_CUR);
             }
-
 
             out_q14 = CLAMP(out_q14, -67108864, 67108864); // 4096 * 16384s
             
