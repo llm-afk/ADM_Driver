@@ -2,7 +2,7 @@
 #include "flash_eeprom.h"
 
 encoder_config_t encoder_config = {
-    .elec_degree_calib = 13440,
+    .elec_degree_calib = 1675,
     .linearity_table = {0},
     .encoder_reverse = 0,
 };
@@ -18,12 +18,11 @@ void encoder_loop(void)
 {
     // 更新编码器角度
     encoder.enc_degree_raw = get_main_degree_raw();
-    encoder.ex_enc_degree_raw = get_ex_degree_raw();
 
     // 修正旋转方向
     if(encoder_config.encoder_reverse)
     {
-        encoder.enc_degree_raw = ENCODER_CPR - encoder.enc_degree_raw;
+        encoder.enc_degree_raw = ENCODER_CPR - 1 - encoder.enc_degree_raw;
     }
 
     // 线性补偿
@@ -54,8 +53,14 @@ void encoder_loop(void)
     // 更新电角度
     if(motor_ctrl.state == MIT)
     {
-        // (encoder.enc_degree_lined % (ENCODER_CPR / 8)) * 8 * 4
-        encoder.elec_degree = (((encoder.enc_degree_lined & 0x7FF) << 3) - encoder_config.elec_degree_calib) << 2; // 归一化到u16
+        int16_t elec_raw = (int16_t)((encoder.enc_degree_lined & 0x7FF) - encoder_config.elec_degree_calib);
+        if(elec_raw < 0)elec_raw += 2048;
+
+        encoder.elec_degree = ((uint16_t)elec_raw << 5);
+        if(encoder_config.encoder_reverse)
+        {
+            encoder.elec_degree = 65535 - encoder.elec_degree;
+        }
     }
 }
 
@@ -67,6 +72,7 @@ uint16_t encoder_calibrate(void)
 {
     static uint16_t cnt = 0;
     static uint16_t state = 0;
+    static uint16_t enc_degree_raw = 0;
 
     switch(state)
     {
@@ -74,44 +80,86 @@ uint16_t encoder_calibrate(void)
         {
             Iq = 0;
             Id = 1024;
-            if(cnt >= 2000)
+            encoder.elec_degree = 0;
+            if(cnt >= 1000)
             {
-                state = 1;
+                enc_degree_raw = encoder.enc_degree_raw;
                 cnt = 0;
+                state = 1;
             }
             break;
         }
         case 1: // cw find direction
         {
-            state = 2;
+            encoder.elec_degree += 256; // 旋转4个电周期
+            if(cnt >= 1024)
+            {
+                int16_t degree_dif = encoder.enc_degree_raw - enc_degree_raw;
+                if (degree_dif > ENCODER_CPR_DIV) 
+                {
+                    degree_dif -= ENCODER_CPR;
+                } 
+                else if(degree_dif < -ENCODER_CPR_DIV) 
+                {
+                    degree_dif += ENCODER_CPR;
+                }
+
+                if(degree_dif > 0)
+                {
+                    if(encoder_config.encoder_reverse) 
+                    {
+                        encoder_config.encoder_reverse = 0;
+                    } 
+                    else
+                    {
+                        encoder_config.encoder_reverse = 1;
+                    }
+                }
+                cnt = 0;
+                state = 2;
+            } 
             break;
         }
-        case 2: // cw dummy
+        case 2: // lock
         {
-            state = 3;
+            Iq = 0;
+            Id = 1024;
+            encoder.elec_degree = 0;
+            if(cnt >= 1000)
+            {
+                encoder_config.elec_degree_calib = (encoder.enc_degree_raw & 0x7FF);
+                enc_degree_raw = encoder.enc_degree_raw;
+                cnt = 0;
+                state = 3;
+            }
             break;
         }
-        case 3: // cw loop
+        case 3: // cw dummy
         {
             state = 4;
             break;
         }
-        case 4: // cw dummy
+        case 4: // cw loop
         {
             state = 5;
             break;
         }
-        case 5: // ccw dummy
+        case 5: // cw dummy
         {
             state = 6;
             break;
         }
-        case 6: // ccw loop
+        case 6: // ccw dummy
         {
             state = 7;
             break;
         }
-        case 7: // calculate 
+        case 7: // ccw loop
+        {
+            state = 8;
+            break;
+        }
+        case 8: // calculate 
         {
             state = 0;
             cnt = 0;

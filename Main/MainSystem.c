@@ -33,13 +33,14 @@ void main(void)
     OD_init(); // 先初始化OD对象,初始化参数默认值
 
     eeprom_init();
+    load_ram_item_to_eeprom_from_key(1);
     load_eeprom_to_ram(); // 初始化参数
 
     canfd_init(); // 根据eeprom参数初始化canfd
 
     stimer_init(&stimer_main);
     stimer_addTask(&stimer_main, 0, 1, 0, KickDog);
-    stimer_addTask(&stimer_main, 1, 1, 0, servo_loop);
+    stimer_addTask(&stimer_main, 1, 1, 0, MC_servo_loop);
     stimer_addTask(&stimer_main, 2, 1, 0, can_com_loop);
     stimer_addTask(&stimer_main, 3, 2, 1, info_collect_loop);
     stimer_addTask(&stimer_main, 4, 1, 0, SystemLeve05msMotor);

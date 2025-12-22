@@ -49,7 +49,7 @@ int MC_controlword_update(void)
  * @note 放在stimer框架下2Khz循环执行
  */
 #pragma CODE_SECTION(servo_loop, "ramfuncs");
-void servo_loop(void)
+void MC_servo_loop(void)
 {
     // 更新减速端位置和速度
     // encoder.degree_q14 = (encoder.enc_turns / GEAR_RATIO * 2pi * 2^14) + (encoder.enc_degree_lined / ENCODER_CPR / GEAR_RATIO * 2pi * 2^14) ;
@@ -68,11 +68,23 @@ void servo_loop(void)
             int64_t degree_err_q14 = motor_ctrl.degree_ref_q14 - encoder.degree_q14;
             int64_t velocity_err_q14 = motor_ctrl.velocity_ref_q14 - encoder.velocity_q14;
 
-            int32_t out_q14 = (int32_t)(((int64_t)motor_ctrl.Kp_q14 * degree_err_q14) >> 14) \
-                            + (int32_t)(((int64_t)motor_ctrl.Kd_q14 * velocity_err_q14) >> 14) \
-                            + (motor_ctrl.current_ref_q14 * 40960 / MOTOR_RATED_CUR);
+            int32_t out_q14 = 0;
 
-            out_q14 = CLAMP(out_q14, -67108864, 67108864); // 4096 * 16384
+            if(encoder_config.encoder_reverse == 0)
+            {
+                out_q14 = (int32_t)(((int64_t)motor_ctrl.Kp_q14 * degree_err_q14) >> 14) \
+                        + (int32_t)(((int64_t)motor_ctrl.Kd_q14 * velocity_err_q14) >> 14) \
+                        + (motor_ctrl.current_ref_q14 * 40960 / MOTOR_RATED_CUR);
+            }
+            else
+            {
+                out_q14 = -(int32_t)(((int64_t)motor_ctrl.Kp_q14 * degree_err_q14) >> 14) \
+                        - (int32_t)(((int64_t)motor_ctrl.Kd_q14 * velocity_err_q14) >> 14) \
+                        - (motor_ctrl.current_ref_q14 * 40960 / MOTOR_RATED_CUR);
+            }
+
+
+            out_q14 = CLAMP(out_q14, -67108864, 67108864); // 4096 * 16384s
             
             Iq = out_q14 >> 14; 
             Id = 0;

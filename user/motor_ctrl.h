@@ -35,7 +35,7 @@ typedef struct {
 
 extern motor_ctrl_t motor_ctrl;
 
-void servo_loop(void);
+void MC_servo_loop(void);
 void info_collect_loop(void);
 
 int MC_controlword_update(void);

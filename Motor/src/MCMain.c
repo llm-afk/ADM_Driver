@@ -1538,25 +1538,25 @@ void SoftWareErrorDeal(void)
 	//     if (SoftwareOCCnt > 1) SoftwareOCCnt--;
 	// }
 
-	if (gUDC.uDC > gInvInfo.InvUpUDC)	        //过压判断,使用大滤波电压
-	{
-		DisableDrive();
-		gMainStatus.ErrorCode = ERROR_OV_ACC_SPEED;
-	}
-	else if (gUDC.uDC < gInvInfo.InvLowUDC)   //欠压判断,使用大滤波电压
-	{
-		DisableDrive();
-		DisConnectRelay();
-		gMainStatus.RunStep = STATUS_LOW_POWER;
-		gMainStatus.SubStep = 0;
-		gMainStatus.ErrorCode = ERROR_UV;
-        gMainStatus.StatusWord.bit.LowUDC = 1;
-	}
+	// if (gUDC.uDC > gInvInfo.InvUpUDC)	        //过压判断,使用大滤波电压
+	// {
+	// 	DisableDrive();
+	// 	gMainStatus.ErrorCode = ERROR_OV_ACC_SPEED;
+	// }
+	// else if (gUDC.uDC < gInvInfo.InvLowUDC)   //欠压判断,使用大滤波电压
+	// {
+	// 	DisableDrive();
+	// 	DisConnectRelay();
+	// 	gMainStatus.RunStep = STATUS_LOW_POWER;
+	// 	gMainStatus.SubStep = 0;
+	// 	gMainStatus.ErrorCode = ERROR_UV;
+    //     gMainStatus.StatusWord.bit.LowUDC = 1;
+	// }
 
-	if (gMainCmd.Command.bit.Start != TRUE)
-	{
-		SoftwareOCCnt = 0;
-	}
+	// if (gMainCmd.Command.bit.Start != TRUE)
+	// {
+	// 	SoftwareOCCnt = 0;
+	// }
 
     /*
 	// ERROR_STALL 处理
@@ -1582,20 +1582,20 @@ void SoftWareErrorDeal(void)
     // 1：没接电机，速度观察值不对。
     // 2：高速PI 太小，加速时候速度超调太多。（比如冰箱压机负载，重再启动可能会）
     // 视情况，可以屏蔽。
-    static int InstallCnt1;
-    if (pm_fast_freq != 0)
-    {
-        if ((pm_est_omg > pm_fast_freq) || (pm_est_omg < -pm_fast_freq))
-        {
-            InstallCnt1++;
-            if (InstallCnt1 > 5) {
-                DisableDrive();
-                gMainStatus.ErrorCode = ERROR_ERROR_KE;
-            } else {
-                InstallCnt1 = 0;
-            }
-        }
-    }
+    // static int InstallCnt1;
+    // if (pm_fast_freq != 0)
+    // {
+    //     if ((pm_est_omg > pm_fast_freq) || (pm_est_omg < -pm_fast_freq))
+    //     {
+    //         InstallCnt1++;
+    //         if (InstallCnt1 > 5) {
+    //             DisableDrive();
+    //             gMainStatus.ErrorCode = ERROR_ERROR_KE;
+    //         } else {
+    //             InstallCnt1 = 0;
+    //         }
+    //     }
+    // }
 
     /*
     // 干烧保护。速度达到一定值且负载很小的情况，持续一定时间。。。

@@ -24,7 +24,7 @@ static void dictionary_init(void)
     ODObjs.error_code = 0;
     ODObjs.control_word = 0;
     ODObjs.node_id = 1;
-    ODObjs.firmware_version = 100; // 版本号
+    ODObjs.firmware_version = 100; 
 }
 
 /**

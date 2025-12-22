@@ -4,6 +4,7 @@
 #include "MainInclude.h"
 #include "SPIcomm.h"
 #include "motor_ctrl.h"
+#include "utils.h"
 
 #define ENCODER_BITS            (14)
 #define ENCODER_CPR             (1 << ENCODER_BITS)
@@ -29,7 +30,7 @@ typedef struct{
     int64_t degree_q14;           // 减速端角度 (rad)
     int32_t velocity_q14;         // 减速端速度 (rad/s)
 
-    int16_t elec_degree;          // 电角度
+    uint16_t elec_degree;         // 电角度
 
     uint16_t ex_enc_degree_raw;    
     uint16_t ex_enc_degree_lined;   
