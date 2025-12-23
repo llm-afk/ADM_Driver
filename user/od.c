@@ -16,6 +16,8 @@ static const OD_entry_t ODList[] =
     {0x2000, &ODObjs.error_code,                2, ATTR_RAM | ATTR_R,  NULL},
     {0x2002, &ODObjs.control_word,              2, ATTR_RAM | ATTR_RW, MC_controlword_update},
     {0x2040, &ODObjs.node_id,                   1, ATTR_ROM | ATTR_RW, NULL},  
+    {0x2070, &ODObjs.in_encoder_offset,         2, ATTR_ROM | ATTR_RW, NULL},
+    {0x2071, &ODObjs.ex_encoder_offset,         2, ATTR_ROM | ATTR_RW, NULL}, // ÓÃÓÚ¼ÇÂ¼±êÁãÊ±¿ÌµÄÖ÷±àÂëÆ÷µÄÖµºÍ¸±±àÂëÆ÷µÄÖµĞ´½øÀ´
     {0x2100, &ODObjs.firmware_version,          2, ATTR_RAM | ATTR_R,  NULL},
 };
 
@@ -24,21 +26,25 @@ static void dictionary_init(void)
     ODObjs.error_code = 0;
     ODObjs.control_word = 0;
     ODObjs.node_id = 1;
+    ODObjs.in_encoder_offset = 0;
+    ODObjs.ex_encoder_offset = 0;
     ODObjs.firmware_version = 100; 
 }
 
 /**
- * @brief å…¼å®¹æˆ‘å†™çš„eepromåº“çš„ä¸€ä¸ªè¡¥ä¸å§ç®—æ˜¯
- * @param idx od objç´¢å¼•
- * @return eepromåº“keyç´¢å¼•
- * @note æ‰€æœ‰æ³¨å†Œåœ¨odå­—å…¸å¯¹è±¡ä¸­çš„æœ‰romå±æ€§çš„å˜é‡éƒ½éœ€è¦åœ¨è¿™é‡Œå¤šæ³¨å†Œä¸€é
+ * @brief ¼æÈİÎÒĞ´µÄeeprom¿âµÄÒ»¸ö²¹¶¡°ÉËãÊÇ
+ * @param idx od objË÷Òı
+ * @return eeprom¿âkeyË÷Òı
+ * @note ËùÓĞ×¢²áÔÚod×Öµä¶ÔÏóÖĞµÄÓĞromÊôĞÔµÄ±äÁ¿¶¼ĞèÒªÔÚÕâÀï¶à×¢²áÒ»±é
  */
 static uint16_t get_eeprom_key_from_index(uint16_t idx)
 {
     switch(idx)
     {
         case 0x2040: return 0;   // node_id
-        default: return 0xFF;    // æ— æ•ˆç´¢å¼•ï¼Œè¿”å›é”™è¯¯æ ‡è¯†
+        case 0x2070: return 2;   // in_encoder_offset
+        case 0x2071: return 3;   // ex_encoder_offset
+        default: return 0xFF;    // ÎŞĞ§Ë÷Òı£¬·µ»Ø´íÎó±êÊ¶
     }
 }
 

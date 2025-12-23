@@ -25,17 +25,13 @@ void main(void)
     InitPeripherals();             
     InitForMotorApp();        
     InitForFunctionApp();
-    EnableDog();
-    SetInterruptEnable();        
-    EINT; //使能全局中断
-    ERTM; //使能实时模式
 
     OD_init(); // 先初始化OD对象,初始化参数默认值
 
     eeprom_init();
-    load_ram_item_to_eeprom_from_key(1);
     load_eeprom_to_ram(); // 初始化参数
 
+    encoder_init(); // 根据eeprom参数配置encoder
     canfd_init(); // 根据eeprom参数初始化canfd
 
     stimer_init(&stimer_main);
@@ -48,6 +44,10 @@ void main(void)
     stimer_addTask(&stimer_main, 6, 4, 0, SystemLeve2msMotor);
     stimer_addTask(&stimer_main, 7, 4, 2, SystemLeve2msFunction);
     
+    EnableDog();
+    SetInterruptEnable();      
+    EINT; //使能全局中断
+    ERTM; //使能实时模式
     while(1)
     {
         stimer_loop(&stimer_main);

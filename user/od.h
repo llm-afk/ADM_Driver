@@ -15,6 +15,8 @@ typedef struct {
     uint16_t error_code;
     uint16_t control_word;
     uint16_t node_id;
+    uint16_t in_encoder_offset;
+    uint16_t ex_encoder_offset;
     uint16_t firmware_version;
 }ODObjs_t;
 

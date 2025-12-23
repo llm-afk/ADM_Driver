@@ -294,7 +294,7 @@ static void parse_frame(canFrame_t *frame)
  * @brief can协议通信loop
  * @note 在stimer框架下面2khz执行
  */
-#pragma CODE_SECTION(COM_CAN_loop, "ramfuncs");
+#pragma CODE_SECTION(can_com_loop, "ramfuncs");
 void can_com_loop(void)
 {
     canFrame_t canFrame_temp = {0};

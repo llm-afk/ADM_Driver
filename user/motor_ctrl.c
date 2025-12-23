@@ -10,27 +10,27 @@ int MC_controlword_update(void)
 {
     switch(ODObjs.control_word & 0x00FF)
     {
-        case CW_CMD_OPERATION_ENABLE: // ä½¿èƒ½ç”µæœº
+        case CW_CMD_OPERATION_ENABLE: // Ê¹ÄÜµç»ú
         {
             RunSignal = 1;
             break;
         }
-        case CW_CMD_OPERATION_DISABLE: // å¤±èƒ½ç”µæœº
+        case CW_CMD_OPERATION_DISABLE: // Ê§ÄÜµç»ú
         {
             RunSignal = 0;
             break;
         }
-        case CW_CMD_RESET_HOME: // å¤ä½åŸç‚¹
+        case CW_CMD_RESET_HOME: // ¸´Î»Ô­µã
         {
 
             break;
         }
-        case CW_CMD_ERROR_RESET: // é”™è¯¯æ¸…é™¤
+        case CW_CMD_ERROR_RESET: // ´íÎóÇå³ı
         {
             ODObjs.error_code = 0;
             break;
         }
-        case CW_CMD_DEV_ENCODER_CALIB: // ç¼–ç å™¨æ ¡å‡†
+        case CW_CMD_DEV_ENCODER_CALIB: // ±àÂëÆ÷Ğ£×¼
         {
             motor_ctrl.state = ENCODER_CALIBRATE;
             break;
@@ -45,15 +45,15 @@ int MC_controlword_update(void)
 }
 
 /**
- * @brief ç”µæœºçŠ¶æ€æ§åˆ¶ä¸»å¾ªç¯
- * @note æ”¾åœ¨stimeræ¡†æ¶ä¸‹2Khzå¾ªç¯æ‰§è¡Œ
+ * @brief µç»ú×´Ì¬¿ØÖÆÖ÷Ñ­»·
+ * @note ·ÅÔÚstimer¿ò¼ÜÏÂ2KhzÑ­»·Ö´ĞĞ
  */
-#pragma CODE_SECTION(servo_loop, "ramfuncs");
+#pragma CODE_SECTION(MC_servo_loop, "ramfuncs");
 void MC_servo_loop(void)
 {
-    // æ›´æ–°å‡é€Ÿç«¯ä½ç½®å’Œé€Ÿåº¦
-    // encoder.degree_q14 = (encoder.enc_turns / GEAR_RATIO * 2pi * 2^14) + (encoder.enc_degree_lined / ENCODER_CPR / GEAR_RATIO * 2pi * 2^14) ;
-    encoder.degree_q14 = (encoder.enc_turns * 8580) + (((int32_t)encoder.enc_degree_lined * 8579) >> 14);
+    // ¸üĞÂ¼õËÙ¶ËÎ»ÖÃºÍËÙ¶È
+    // encoder.degree_q14 = (encoder.enc_turns / GEAR_RATIO * 2pi * 2^14) + ((encoder.enc_degree_lined - ÉÏµçÊ±¿ÌÖ÷±àÂëÆ÷µÄ½Ç¶ÈÖµ) / ENCODER_CPR / GEAR_RATIO * 2pi * 2^14) + (encoder.error * 0.75f * 2pi * 16384 / 8192) ;
+    encoder.degree_q14 = (encoder.enc_turns * 8580) + (((int32_t)((int32_t)encoder.enc_degree_lined - (int32_t)encoder.in_enc_deg_zero) * 8580) >> 14) + (int32_t)((float)encoder.error * 9.245f);
     encoder.velocity_q14 = (int32_t)(encoder.enc_velocity_q14 * GEAR_RATIO_INV);
     
     switch(motor_ctrl.state)
@@ -68,7 +68,7 @@ void MC_servo_loop(void)
             int64_t degree_err_q14 = motor_ctrl.degree_ref_q14 - encoder.degree_q14;
             int64_t velocity_err_q14 = motor_ctrl.velocity_ref_q14 - encoder.velocity_q14;
 
-            degree_err_q14   = CLAMP(degree_err_q14,  -102944,  102944); // è§£å†³ä½ç½®ç›®æ ‡å€¼å’Œå®é™…å€¼è¿‡å¤§å¯¼è‡´è®¡ç®—ä¸­é—´è¿‡ç¨‹æº¢å‡ºå¯¼è‡´åå‘è½¬åŠ¨çš„é—®é¢˜
+            degree_err_q14   = CLAMP(degree_err_q14,  -102944,  102944); // ½â¾öÎ»ÖÃÄ¿±êÖµºÍÊµ¼ÊÖµ¹ı´óµ¼ÖÂ¼ÆËãÖĞ¼ä¹ı³ÌÒç³öµ¼ÖÂ·´Ïò×ª¶¯µÄÎÊÌâ
             velocity_err_q14 = CLAMP(velocity_err_q14,-1638400, 1638400);
 
             int32_t out_q14 = 0;
@@ -86,7 +86,7 @@ void MC_servo_loop(void)
                         - (motor_ctrl.current_ref_q14 * 40960 / MOTOR_RATED_CUR);
             }
 
-            out_q14 = CLAMP(out_q14, -67108864, 67108864); // 4096 * 16384s
+            out_q14 = CLAMP(out_q14, -67108864, 67108864); // 4096 * 16384
             
             Iq = out_q14 >> 14; 
             Id = 0;
@@ -118,12 +118,12 @@ void MC_servo_loop(void)
 }
 
 /**
- * @brief é‡‡é›†ç”µæœºæ§åˆ¶ç›¸å…³æ•°æ®
- * @note æ”¾åœ¨stimeræ¡†æ¶ä¸‹1Khzå¾ªç¯æ‰§è¡Œ
+ * @brief ²É¼¯µç»ú¿ØÖÆÏà¹ØÊı¾İ
+ * @note ·ÅÔÚstimer¿ò¼ÜÏÂ1KhzÑ­»·Ö´ĞĞ
  */
 #pragma CODE_SECTION(info_collect_loop, "ramfuncs");
 void info_collect_loop(void)
 {
-    // é‡‡é›†é©±åŠ¨æ¿æ¸©åº¦
+    // ²É¼¯Çı¶¯°åÎÂ¶È
     
 }

@@ -11,6 +11,8 @@ uint16_t eeprom_data_temp[ADDR_NUM] = {0}; // eeprom²ÁÐ´±¸·Ý»º³åÇø
 eeprom_item_t eeprom_item_list[] = {
     {0, sizeof(ODObjs.node_id),                 &ODObjs.node_id},
     {1, sizeof(encoder_config_t),               &encoder_config},
+    {2, sizeof(ODObjs.in_encoder_offset),       &ODObjs.in_encoder_offset},
+    {3, sizeof(ODObjs.ex_encoder_offset),       &ODObjs.ex_encoder_offset},
 };
 
 /**

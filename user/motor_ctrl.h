@@ -21,16 +21,16 @@ typedef enum{
 #define CW_CMD_DEV_ENCODER_CALIB            0xF1
 
 typedef struct {
-    motor_mode_t state;   // æ§åˆ¶æ¨¡å¼çŠ¶æ€
+    motor_mode_t state;   // ¿ØÖÆÄ£Ê½×´Ì¬
 
-    int32_t degree_ref_q14;   // è¾“å‡ºç«¯ç›®æ ‡è§’åº¦ rad
-    int32_t velocity_ref_q14; // è¾“å‡ºç«¯ç›®æ ‡é€Ÿåº¦ rad/s
-    int32_t current_ref_q14;  // mitå‰é¦ˆç”µæµ A
+    int32_t degree_ref_q14;   // Êä³ö¶ËÄ¿±ê½Ç¶È rad
+    int32_t velocity_ref_q14; // Êä³ö¶ËÄ¿±êËÙ¶È rad/s
+    int32_t current_ref_q14;  // mitÇ°À¡µçÁ÷ A
     uint32_t Kp_q14;          // mit_kp 0.01
     uint32_t Kd_q14;          // mit_kd 0.01
 
-    int32_t board_temp_q14;   // é©±åŠ¨å™¨æ¸©åº¦
-    int32_t motor_temp_q14;   // ç”µæœºæ¸©åº¦
+    int32_t board_temp_q14;   // Çı¶¯Æ÷ÎÂ¶È
+    int32_t motor_temp_q14;   // µç»úÎÂ¶È
 }motor_ctrl_t;
 
 extern motor_ctrl_t motor_ctrl;
