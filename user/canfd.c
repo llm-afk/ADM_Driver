@@ -245,7 +245,7 @@ static void parse_frame(canFrame_t *frame)
             // *(float*)&frame->data[4] = (float)gIMT.T * MOTOR_RATED_CUR / 40960.0f; // 力矩(N/m)
             *(float*)&frame->data[0] = (float)encoder.degree_q14 / 16384.0f; // 减速端位置反馈(rad)
             *(float*)&frame->data[2] = (float)encoder.velocity_q14 / 16384.0f; // 减速端速度反馈(rad/s)
-            *(float*)&frame->data[4] = (float)(square(((uint64_t)(((int32_t)gIMT.M * gIMT.M) + ((int32_t)gIMT.T * gIMT.T))) << 16) >> 8) * (((gIMT.M + gIMT.T) >= 0) ? +1 : -1) * MOTOR_RATED_CUR / 40960.0f; // 电流(A)
+            *(float*)&frame->data[4] = (float)(square(((uint64_t)(((int32_t)gIMT.M * gIMT.M) + ((int32_t)gIMT.T * gIMT.T))) << 16) >> 8) * (((gIMT.M + gIMT.T) >= 0) ? +1 : -1) * (encoder_config.encoder_reverse ? -1 : 1) * MOTOR_RATED_CUR / 40960.0f; // 电流(A)
             frame->data[6] = (int16_t)123; // 电机温度 (0.1°)
             frame->data[7] = (int16_t)456; // 驱动器温度 (0.1°) 
             enqueue_tx_frame(frame);
