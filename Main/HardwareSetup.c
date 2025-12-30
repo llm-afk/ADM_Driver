@@ -69,7 +69,7 @@ void InitSysCtrl()
     // conserve power.
     // Initialize the PLL control: PLLCR and CLKINDIV
     // DSP28_PLLCR and DSP28_CLKINDIV are defined in DSP2803x_Examples.h
-	InitPll(DSP_CLOCK/10);
+	InitPll(DSP_CLOCK/20);
 
     copy_prg(&prginRAM);		// Move the program from FLASH to RAM
     InitFlash();				// Initializes the Flash Control registers
@@ -308,7 +308,7 @@ void InitPll(Uint16 val)
 
         EALLOW;
 #ifndef INTER_OSC
-        SysCtrlRegs.PLLSTS.bit.DIVSEL = 2;      // configure PLLSTS.DIVSEL = 2  (default)
+        SysCtrlRegs.PLLSTS.bit.DIVSEL = 3;      // configure PLLSTS.DIVSEL = 2  (default)
 #else
         SysCtrlRegs.PLLSTS.bit.DIVSEL = 3;      // configure PLLSTS.DIVSEL = 2  (default)
 #endif
@@ -365,7 +365,7 @@ void InitPeripheralClocks(void)
    SysCtrlRegs.PCLKCR0.bit.LINAENCLK    = 1;  // LINA
    SysCtrlRegs.PCLKCR1.all = 0x011F;
 
-   SysCtrlRegs.PCLKCR3.all = 0x6704;
+   SysCtrlRegs.PCLKCR3.all = 0x6701;
    SysCtrlRegs.PCLKCR0.bit.rsvd5       = 1;   // CANFD
    EDIS;
 }
@@ -558,7 +558,7 @@ void InitSetGpio(void)
     GpioCtrlRegs.GPADIR.bit.GPIO29 = 1;
     GpioCtrlRegs.GPBDIR.bit.GPIO34 = 1;
     GpioCtrlRegs.GPADIR.bit.GPIO16 = 1;
-    GpioDataRegs.GPBSET.bit.GPIO34 = 1;
+    GpioDataRegs.GPBCLEAR.bit.GPIO34 = 1;
     GpioDataRegs.GPADAT.bit.GPIO1  = 1;
 
     // STEP4:
@@ -690,7 +690,7 @@ void InitSetPWM(void)
 
     EPwm2Regs.TZDCSEL.bit.DCAEVT1 = TZ_DCAH_LOW;        // Digital Compare Output A Event 1 Selection:
                                                         // DCAH = low, DCAL = don't care
-    EPwm2Regs.DCTRIPSEL.bit.DCAHCOMPSEL = DC_COMP3OUT;   // Digital Compare A Low Input Select: COMP1OUT input
+    EPwm2Regs.DCTRIPSEL.bit.DCAHCOMPSEL = DC_COMP1OUT;   // Digital Compare A Low Input Select: COMP1OUT input
     EPwm2Regs.DCTRIPSEL.bit.DCALCOMPSEL = DC_TZ2;       // Digital Compare B Low Input Select: TZ2
                                                         // TZ1,TZ3 ASLO OK as DCAL don't care
 
@@ -814,7 +814,7 @@ void InitSetPWM(void)
     // EPwm3Regs.DCACTL.bit.EVT1SYNCE = 0;//1;
     EPwm3Regs.DCACTL.bit.EVT1SRCSEL = 0;
 
-    EPwm3Regs.DCTRIPSEL.bit.DCAHCOMPSEL = DC_COMP3OUT;
+    EPwm3Regs.DCTRIPSEL.bit.DCAHCOMPSEL = DC_COMP1OUT;
     EPwm3Regs.DCTRIPSEL.bit.DCALCOMPSEL = DC_TZ2;
 
     EPwm3Regs.TZDCSEL.bit.DCAEVT1 = TZ_DCAH_LOW;
@@ -931,7 +931,7 @@ void InitSetPWM(void)
     // EPwm4Regs.DCACTL.bit.EVT1SYNCE = 0;//1;
     EPwm4Regs.DCACTL.bit.EVT1SRCSEL = 0;
 
-    EPwm4Regs.DCTRIPSEL.bit.DCAHCOMPSEL = DC_COMP3OUT;
+    EPwm4Regs.DCTRIPSEL.bit.DCAHCOMPSEL = DC_COMP1OUT;
     EPwm4Regs.DCTRIPSEL.bit.DCALCOMPSEL = DC_TZ2;
 
     EPwm4Regs.TZDCSEL.bit.DCAEVT1 = TZ_DCAH_LOW;
@@ -1153,18 +1153,18 @@ void InitSetAdc(void)
     EDIS;
 
     EALLOW;
-    Comp3Regs.DACVAL.bit.DACVAL = OverCurPointInternal;
+    Comp1Regs.DACVAL.bit.DACVAL = OverCurPointInternal;
                                         // 硬件过流比较器配置   2.5V  1024->3V, about 685, 5*1.4142A = 7.1
                                         // 512 * (7.1 / 21) + 512 = 685
                                         // 实测680 OK，690 NOT OK！！！！
                                         // 如果设置10APEAK 过流点，则 10 / 21)*512+512 = 755
                                         // 如果设置10ARMS 过流点，则 10*1.4142 / 21)*512+512 = 856
                                         ///////////////////////////////////////////////////////////////
-    Comp3Regs.COMPCTL.bit.SYNCSEL       = 0;  // Asynchronous version of Comparator output is passed
-    Comp3Regs.COMPCTL.bit.CMPINV        = 1;  // Inverted output of comparator is passed
-    Comp3Regs.COMPCTL.bit.COMPSOURCE    = 0;  // input of comparator connected to internal DAC
-    Comp3Regs.COMPCTL.bit.QUALSEL       = 10; // Qualification Period for synchronized output of the comparator
-    Comp3Regs.COMPCTL.bit.COMPDACEN     = 1;  // Comparator/DAC Enable
+    Comp1Regs.COMPCTL.bit.SYNCSEL       = 0;  // Asynchronous version of Comparator output is passed
+    Comp1Regs.COMPCTL.bit.CMPINV        = 1;  // Inverted output of comparator is passed
+    Comp1Regs.COMPCTL.bit.COMPSOURCE    = 0;  // input of comparator connected to internal DAC
+    Comp1Regs.COMPCTL.bit.QUALSEL       = 10; // Qualification Period for synchronized output of the comparator
+    Comp1Regs.COMPCTL.bit.COMPDACEN     = 1;  // Comparator/DAC Enable
 /*
     Comp2Regs.DACVAL.bit.DACVAL = CBCCurPointInternal;
                                         // 硬件过流比较器配置   2.5V  1024->3V, about 685, 5*1.4142A = 7.1
@@ -1243,7 +1243,7 @@ void InitSetAdc(void)
     //    AdcRegs.ADCSOC1CTL.bit.CHSEL  = ADC_PIN_S6;
     //    AdcRegs.ADCSOC2CTL.bit.CHSEL  = ADC_PIN_S4;
 #else
-    AdcRegs.INTSEL1N2.all     = 0x0024;
+    AdcRegs.INTSEL1N2.all     = 0x0025;
 
     AdcRegs.ADCSOC0CTL.bit.TRIGSEL  = ADCTRIG_EPWM2_SOCA;
     AdcRegs.ADCSOC1CTL.bit.TRIGSEL  = ADCTRIG_EPWM2_SOCA;//ADCTRIG_EPWM4_SOCB;
@@ -1251,7 +1251,7 @@ void InitSetAdc(void)
     AdcRegs.ADCSOC3CTL.bit.TRIGSEL  = ADCTRIG_EPWM2_SOCA;//ADC_TRIG_SOURCE;
     AdcRegs.ADCSOC4CTL.bit.TRIGSEL  = ADCTRIG_EPWM2_SOCA;//ADC_TRIG_SOURCE;
     AdcRegs.ADCSOC5CTL.bit.TRIGSEL  = ADCTRIG_EPWM2_SOCA;//ADC_TRIG_SOURCE;
-    AdcRegs.ADCSOC6CTL.bit.TRIGSEL  = ADCTRIG_EPWM2_SOCA;//ADC_TRIG_SOURCE;
+    //AdcRegs.ADCSOC6CTL.bit.TRIGSEL  = ADCTRIG_EPWM2_SOCA;//ADC_TRIG_SOURCE;
     //Acquisition Pulse Size
     AdcRegs.ADCSOC0CTL.bit.ACQPS  = ACQPS_SYS_CLKS;
     AdcRegs.ADCSOC1CTL.bit.ACQPS  = ACQPS_SYS_CLKS;
@@ -1259,17 +1259,17 @@ void InitSetAdc(void)
     AdcRegs.ADCSOC3CTL.bit.ACQPS  = ACQPS_SYS_CLKS;
     AdcRegs.ADCSOC4CTL.bit.ACQPS  = ACQPS_SYS_CLKS;
     AdcRegs.ADCSOC5CTL.bit.ACQPS  = ACQPS_SYS_CLKS;
-    AdcRegs.ADCSOC6CTL.bit.ACQPS  = ACQPS_SYS_CLKS;
+    //AdcRegs.ADCSOC6CTL.bit.ACQPS  = ACQPS_SYS_CLKS;
 
     // SOCx Channel Select
     // Dual Motor Demo
     AdcRegs.ADCSOC0CTL.bit.CHSEL  = ADC_PIN_S3; // IU
     AdcRegs.ADCSOC1CTL.bit.CHSEL  = ADC_PIN_S7; // IV
-    AdcRegs.ADCSOC2CTL.bit.CHSEL  = ADC_PIN_S13;// ADC_PIN_S12;//13;//ADC_PIN_S0;
-    AdcRegs.ADCSOC3CTL.bit.CHSEL  = ADC_PIN_S5; // Internal Temperature Sensor
-    AdcRegs.ADCSOC4CTL.bit.CHSEL  = ADC_PIN_S11; // BEMF_U
-    AdcRegs.ADCSOC5CTL.bit.CHSEL  = ADC_PIN_S12; // BEMF_V
-    AdcRegs.ADCSOC6CTL.bit.CHSEL  = ADC_PIN_S14; // BEMF_W
+    AdcRegs.ADCSOC2CTL.bit.CHSEL  = ADC_PIN_S12;// VBUS
+    AdcRegs.ADCSOC3CTL.bit.CHSEL  = ADC_PIN_S5; // IBUS
+    AdcRegs.ADCSOC4CTL.bit.CHSEL  = ADC_PIN_S13; // NTC
+    AdcRegs.ADCSOC5CTL.bit.CHSEL  = ADC_PIN_S14; // NTC_M
+    //AdcRegs.ADCSOC6CTL.bit.CHSEL  = ADC_PIN_S14; // BEMF_W
 #endif
 
     ADC_CLEAR_INT_FLAG;

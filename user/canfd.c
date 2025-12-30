@@ -87,9 +87,20 @@ void canfd_init(void)
 {
     // gpio
     EALLOW;
+#if 1
+    GpioCtrlRegs.GPAPUD.bit.GPIO28 = 1;      // CANFD_Rx
+    GpioCtrlRegs.GPAPUD.bit.GPIO29 = 1;     // CANFD_Tx
+    AnalogRegs.PIN_MUX_FLASH.bit.canfd_gpio_mux = 0xA;   //GPIO0 CANFDRXD ; GPIO32 CANFDTXD
+#else
     GpioCtrlRegs.GPAPUD.bit.GPIO0 = 1;      // CANFD_Rx
     GpioCtrlRegs.GPBPUD.bit.GPIO32 = 1;     // CANFD_Tx
     AnalogRegs.PIN_MUX_FLASH.bit.canfd_gpio_mux = 0x5;   //GPIO0 CANFDRXD ; GPIO32 CANFDTXD
+#endif
+
+    GpioCtrlRegs.GPBPUD.bit.GPIO34 = 0;  
+    GpioCtrlRegs.GPBMUX1.bit.GPIO34 = 0;
+    GpioCtrlRegs.GPBDIR.bit.GPIO34 = 1;
+    GpioDataRegs.GPBCLEAR.bit.GPIO34 = 1;
     EDIS;
 
     CanfdRegs.CFG_STAT.bit.RESET = 1; 
@@ -180,6 +191,7 @@ interrupt void canfd_IsrHander1(void)
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP4;
 }
 
+
 /**
  * @brief CAN 数据帧解析函数
  * @param frame 待解析的 CAN 数据帧
@@ -245,11 +257,30 @@ static void parse_frame(canFrame_t *frame)
             // *(float*)&frame->data[4] = (float)gIMT.T * MOTOR_RATED_CUR / 40960.0f; // 力矩(N/m)
             *(float*)&frame->data[0] = (float)encoder.degree_q14 / 16384.0f; // 减速端位置反馈(rad)
             *(float*)&frame->data[2] = (float)encoder.velocity_q14 / 16384.0f; // 减速端速度反馈(rad/s)
-            *(float*)&frame->data[4] = (float)(square(((uint64_t)(((int32_t)gIMT.M * gIMT.M) + ((int32_t)gIMT.T * gIMT.T))) << 16) >> 8) * (((gIMT.M + gIMT.T) >= 0) ? +1 : -1) * (encoder_config.encoder_reverse ? -1 : 1) * MOTOR_RATED_CUR / 40960.0f; // 电流(A)
-            frame->data[6] = (int16_t)123; // 电机温度 (0.1°)
-            frame->data[7] = (int16_t)456; // 驱动器温度 (0.1°) 
+            *(float*)&frame->data[4] = (float)(square(((uint64_t)(((int32_t)gIMT.M * gIMT.M) + ((int32_t)gIMT.T * gIMT.T))) << 16) >> 8) * (((gIMT.M + gIMT.T) >= 0) ? +1 : -1) * MOTOR_RATED_CUR / 40960.0f; // 电流(A)
+            frame->data[6] = (int16_t)(motor_temp * 10.0f); // 电机温度 (0.1°)
+            frame->data[7] = (int16_t)(board_temp * 10.0f); // 驱动器温度 (0.1°) 
             enqueue_tx_frame(frame);
             break;   
+        }
+        case MSG_ID_RPDO_6: // 新增命令码
+        {
+            RunSignal = 1;
+            
+            // 数据上报
+            frame->id = MSG_ID_TPDO_5 + ODObjs.node_id;    
+            frame->len = 16; 
+            if(ODObjs.error_code) 
+            {
+                frame->len = 20; 
+                *(uint16_t*)&frame->data[8] = ODObjs.error_code;
+            }
+            *(float*)&frame->data[0] = (float)encoder.degree_q14 / 16384.0f; // 减速端位置反馈(rad)
+            *(float*)&frame->data[2] = (float)encoder.velocity_q14 / 16384.0f; // 减速端速度反馈(rad/s)
+            *(float*)&frame->data[4] = (float)(square(((uint64_t)(((int32_t)gIMT.M * gIMT.M) + ((int32_t)gIMT.T * gIMT.T))) << 16) >> 8) * (((gIMT.M + gIMT.T) >= 0) ? +1 : -1) * MOTOR_RATED_CUR / 40960.0f; // 电流(A)
+            frame->data[6] = (int16_t)(motor_temp * 10.0f); // 电机温度 (0.1°)
+            frame->data[7] = (int16_t)(board_temp * 10.0f); // 驱动器温度 (0.1°) 
+            enqueue_tx_frame(frame);
         }
         case MSG_ID_DFU:
         {

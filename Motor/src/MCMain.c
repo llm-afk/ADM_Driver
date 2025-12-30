@@ -761,6 +761,7 @@ int IDRef2;
 ************************************************************/
 long Iq = 0;
 long Id = 0;
+#pragma CODE_SECTION(RunCaseRun,"ramfuncs");
 void RunCaseRun(void)
 {
 #if (SINGLE_SHUNT_PWM_MODE == NORMAL_NOISE_PWM_MODE)
@@ -1401,6 +1402,7 @@ void GetCurrentExcursion(void)
 周期中断：完成模拟量采样、电流计算、VC电流环控制等操作
 **************************************************************
 *************************************************************/
+#pragma CODE_SECTION(ADCOverInterrupt, "ramfuncs");
 void ADCOverInterrupt()
 {
 	if ((pm_control_mode  == 0) &&
@@ -1730,6 +1732,7 @@ void calc_out_angle2()
     gPhase.OutPhase = data;
 }
 
+#pragma CODE_SECTION(MotorControlISR, "ramfuncs");
 void MotorControlISR()
 {
 #ifdef SPIN_CONTROL_WITH_BEMF
@@ -1744,13 +1747,13 @@ void MotorControlISR()
 
     // {
     //     // 对电流回采数据iq和id定点一阶低通滤波处理
-    //     static int32_t M_q12 = 0, T_q12 = 0;
+    //     static int32_t M_q20 = 0, T_q20 = 0;
         
-    //     M_q12 += (((int32_t)gIMT.M << 12) - M_q12) >> 4;
-    //     T_q12 += (((int32_t)gIMT.T << 12) - T_q12) >> 4;
+    //     M_q20 += (((int32_t)gIMT.M << 20) - M_q20) >> 1;
+    //     T_q20 += (((int32_t)gIMT.T << 20) - T_q20) >> 1;
 
-    //     gIMT.M = (int16_t)((M_q12 + 2048) >> 12);
-    //     gIMT.T = (int16_t)((T_q12 + 2048) >> 12);
+    //     gIMT.M = (int16_t)((M_q20 + (1 << 19)) >> 20);
+    //     gIMT.T = (int16_t)((T_q20 + (1 << 19)) >> 20);
     // }
 
     if (gMainCmd.Command.bit.Start == TRUE)

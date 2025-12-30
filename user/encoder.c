@@ -123,7 +123,7 @@ void encoder_loop(void)
         if(elec_raw < 0)elec_raw += 2048;
 
         encoder.elec_degree = ((uint16_t)elec_raw << 5);
-        if(encoder_config.encoder_reverse)
+        if(encoder_config.encoder_reverse == 0)
         {
             encoder.elec_degree = 65535 - encoder.elec_degree;
         }
@@ -160,7 +160,7 @@ uint16_t encoder_calibrate(void)
             encoder.elec_degree += 256; // 旋转4个电周期
             if(cnt >= 1024)
             {
-                int16_t degree_dif = encoder.enc_degree_raw - enc_degree_raw;
+                int16_t degree_dif = (int16_t)(encoder.enc_degree_raw - enc_degree_raw);
                 if (degree_dif > ENCODER_CPR_DIV) 
                 {
                     degree_dif -= ENCODER_CPR;
@@ -170,7 +170,7 @@ uint16_t encoder_calibrate(void)
                     degree_dif += ENCODER_CPR;
                 }
 
-                if(degree_dif > 0)
+                if(degree_dif < 0)
                 {
                     if(encoder_config.encoder_reverse) 
                     {
@@ -191,9 +191,12 @@ uint16_t encoder_calibrate(void)
             Iq = 0;
             Id = 1024;
             encoder.elec_degree = 0;
-            if(cnt >= 1000)
+            if(cnt == 500)
             {
                 encoder_config.elec_degree_calib = (encoder.enc_degree_raw & 0x7FF);
+            }
+            else if(cnt >= 1000)
+            {
                 enc_degree_raw = encoder.enc_degree_raw;
                 cnt = 0;
                 state = 3;

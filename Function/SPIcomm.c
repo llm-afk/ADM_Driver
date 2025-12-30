@@ -5,87 +5,181 @@
 #include "AngleSensor.h"
 #include "encoder.h"
 
-#define CS_MAIN_EN()      (GpioDataRegs.GPACLEAR.bit.GPIO19 = 1)
-#define CS_MAIN_DIS()     (GpioDataRegs.GPASET.bit.GPIO19 = 1)
+//Define
+//SSI片选信号控制，低有效
+#define SSI_En()      (GpioDataRegs.GPADAT.bit.GPIO19 = 0)
+#define SSI_Dis()     (GpioDataRegs.GPADAT.bit.GPIO19 = 1)
 
-#define CS_EX_EN()      (GpioDataRegs.GPACLEAR.bit.GPIO29 = 1)
-#define CS_EX_DIS()     (GpioDataRegs.GPASET.bit.GPIO29 = 1)
+//SSI时钟信号控制，从机在CLK的上升沿驱动，主机应在CLK的下降沿捕获
+#define SSI_CLK_L()   (GpioDataRegs.GPADAT.bit.GPIO18 = 0)
+#define SSI_CLK_H()   (GpioDataRegs.GPADAT.bit.GPIO18 = 1)
 
-void InitSpiIO(void)
-{
-    EALLOW;
+//SSI数据读取
+#define SSI_DO_READ() (GpioDataRegs.GPADAT.bit.GPIO17)
 
-    GpioCtrlRegs.GPAPUD.bit.GPIO16 = 0;   // Enable pull-up on GPIO16 (SPISIMOA)
-    GpioCtrlRegs.GPAPUD.bit.GPIO17 = 0;   // Enable pull-up on GPIO17 (SPISOMIA)
-    GpioCtrlRegs.GPAPUD.bit.GPIO18 = 0;   // Enable pull-up on GPIO18 (SPICLKA)
-    GpioCtrlRegs.GPAPUD.bit.GPIO19 = 0;   // Enable pull-up on GPIO19 (SPISTEA)
-    GpioCtrlRegs.GPAPUD.bit.GPIO29 = 0;   // ex_cs
+//--------------------------------------------------------------
 
+//SSI片选信号控制，低有效
+#define SSI_En1()      (GpioDataRegs.GPBDAT.bit.GPIO32 = 0)
+#define SSI_Dis1()     (GpioDataRegs.GPBDAT.bit.GPIO32 = 1)
 
-    GpioCtrlRegs.GPAQSEL2.bit.GPIO16 = 3; // Asynch input GPIO16 (SPISIMOA)
-    GpioCtrlRegs.GPAQSEL2.bit.GPIO17 = 3; // Asynch input GPIO17 (SPISOMIA)
-    GpioCtrlRegs.GPAQSEL2.bit.GPIO18 = 3; // Asynch input GPIO18 (SPICLKA)
-    GpioCtrlRegs.GPAQSEL2.bit.GPIO19 = 3; // Asynch input GPIO19 (SPISTEA)
-    GpioCtrlRegs.GPAQSEL2.bit.GPIO29 = 3;
+//SSI时钟信号控制，从机在CLK的上升沿驱动，主机应在CLK的下降沿捕获
+#define SSI_CLK_L1()   (GpioDataRegs.GPADAT.bit.GPIO1 = 0)
+#define SSI_CLK_H1()   (GpioDataRegs.GPADAT.bit.GPIO1 = 1)
 
-    GpioCtrlRegs.GPAMUX2.bit.GPIO16 = 1; // Configure GPIO16 as SPISIMOA
-    GpioCtrlRegs.GPAMUX2.bit.GPIO17 = 1; // Configure GPIO17 as SPISOMIA
-    GpioCtrlRegs.GPAMUX2.bit.GPIO18 = 1; // Configure GPIO18 as SPICLKA
-    GpioCtrlRegs.GPAMUX2.bit.GPIO19 = 0; // Configure GPIO19 as SPISTEA
-    GpioCtrlRegs.GPAMUX2.bit.GPIO29 = 0;
+//SSI数据读取
+#define SSI_DO_READ1() (GpioDataRegs.GPADAT.bit.GPIO16)
 
-    GpioCtrlRegs.GPADIR.bit.GPIO19 = 1; // ca_main设置为输出
-    GpioCtrlRegs.GPADIR.bit.GPIO29 = 1; // ca_main设置为输出
+//--------------------------------------------------------------
 
-    CS_MAIN_DIS();
-    CS_EX_DIS();
+// 数据长度(Bit0 - Bit23)
+#define SSI_DATA_BITS 14
 
-    EDIS;
-}
 
 void InitSpi(void)
 {
-    InitSpiIO();
-
+    //Init Gpio for Ssi
     EALLOW;
-    SysCtrlRegs.PCLKCR0.bit.SPIAENCLK = 1;   // SPI-A
-    SpiaRegs.SPICCR.bit.SPISWRESET = 0;//SPI 软件复位位。在改变 SPI 模块的配置之前应先将该位清零；在恢复 SPI操作之前应将该位置 1
-    SpiaRegs.SPICCR.bit.SPICHAR = 0xf;//16位数据长度
-    SpiaRegs.SPICCR.bit.SPILBK = 0;//回环控制禁止
-    SpiaRegs.SPICCR.bit.CLKPOLARITY = 1;//数据在上升沿输出，在下降沿输入。当没有SPI 数据发送时， SPICLK 为低电 平。数据的输入和输出边沿视
-    SpiaRegs.SPICTL.bit.SPIINTENA =0;//禁止中断
-    //SpiaRegs.SPICTL.bit.SPIINTENA = 1;//使能中断
-    SpiaRegs.SPICTL.bit.TALK = 1;//允许4 脚发送，保证使能接收器的SPISTE 输入管脚。
-    SpiaRegs.SPICTL.bit.MASTER_SLAVE = 1;//SPI 被配置为主控制器
-    SpiaRegs.SPICTL.bit.CLK_PHASE = 0;//标准的SPICLK 信号，其极性由CLOCK POLARITY 位决定
-    SpiaRegs.SPICTL.bit.OVERRUNINTENA =0;//禁止RECEIVER OVERRUN Flag 位产生的中断
-    SpiaRegs.SPIBRR = 6; // 目前是 100/7 = 14.29Mhz 的spi时钟频率
-    SpiaRegs.SPICCR.bit.SPISWRESET =1;
+    GpioCtrlRegs.GPAPUD.bit.GPIO17 = 0;   // Enable pull-up on GPIO17 (SPISOMIA)
+    GpioCtrlRegs.GPAPUD.bit.GPIO18 = 0;   // Enable pull-up on GPIO18 (SPICLKA)
+    GpioCtrlRegs.GPAPUD.bit.GPIO19 = 0;   // Enable pull-up on GPIO19 (SPISTEA)
+
+    GpioCtrlRegs.GPAMUX2.bit.GPIO17 = 0; // Configure GPIO17 as GPIO
+    GpioCtrlRegs.GPAMUX2.bit.GPIO18 = 0; // Configure GPIO18 as GPIO
+    GpioCtrlRegs.GPAMUX2.bit.GPIO19 = 0; // Configure GPIO19 as GPIO
+
+    GpioCtrlRegs.GPADIR.bit.GPIO17 = 0; //DO
+    GpioCtrlRegs.GPADIR.bit.GPIO18 = 1; //CLK
+    GpioCtrlRegs.GPADIR.bit.GPIO19 = 1; //CSN
+
+//--------------------------------------------------------------
+
+    GpioCtrlRegs.GPAPUD.bit.GPIO16 = 0;   // Enable pull-up on GPIO17 (SPISOMIA)
+    GpioCtrlRegs.GPAPUD.bit.GPIO1 = 0;   // Enable pull-up on GPIO18 (SPICLKA)
+    GpioCtrlRegs.GPBPUD.bit.GPIO32 = 0;   // Enable pull-up on GPIO19 (SPISTEA)
+
+    GpioCtrlRegs.GPAMUX2.bit.GPIO16 = 0; // Configure GPIO17 as GPIO
+    GpioCtrlRegs.GPAMUX1.bit.GPIO1 = 0; // Configure GPIO18 as GPIO
+    GpioCtrlRegs.GPBMUX1.bit.GPIO32 = 0; // Configure GPIO19 as GPIO
+
+    GpioCtrlRegs.GPADIR.bit.GPIO16 = 0; //DO
+    GpioCtrlRegs.GPADIR.bit.GPIO1 = 1; //CLK
+    GpioCtrlRegs.GPBDIR.bit.GPIO32 = 1; //CSN
+
     EDIS;
+
+    // 初始状态：CLK高电平，CSN高电平（不选中）
+    GpioDataRegs.GPADAT.bit.GPIO19 = 1;
+    GpioDataRegs.GPADAT.bit.GPIO18 = 1;
+
+    GpioDataRegs.GPADAT.bit.GPIO19 = 1;
+    GpioDataRegs.GPBDAT.bit.GPIO32 = 1;
 }
 
-#pragma CODE_SECTION(SPITransfer_main,"ramfuncs");
-Uint16 SPITransfer_main(Uint16 data)
+// 简单的延时函数
+static void SSI_Delay(Uint16 Count)
 {
-    CS_MAIN_EN();
-    while(SpiaRegs.SPISTS.bit.BUFFULL_FLAG == 1);
-    SpiaRegs.SPITXBUF = data;
-    while(SpiaRegs.SPISTS.bit.INT_FLAG == 0);
-    CS_MAIN_DIS();
-    return SpiaRegs.SPIRXBUF;
+    //Uint16 i;
+   /* for(i = 0; i < Count; i++) {
+        asm(" NOP");
+    }
+   */
+    asm(" RPT #1 || NOP");
 }
 
-#pragma CODE_SECTION(SPITransfer_ex,"ramfuncs");
-Uint16 SPITransfer_ex(Uint16 data)
+// SSI数据读取函数
+#pragma CODE_SECTION(SSI_ReadData,"ramfuncs");
+uint16_t SSI_ReadData(void)
 {
-    CS_EX_EN();
-    while(SpiaRegs.SPISTS.bit.BUFFULL_FLAG == 1);
-    SpiaRegs.SPITXBUF = data;
-    while(SpiaRegs.SPISTS.bit.INT_FLAG == 0);
-    CS_EX_DIS();
-    return SpiaRegs.SPIRXBUF;
+    Uint32 data = 0;
+    Uint16 i;
+
+    // 启动传输：拉低片选
+    SSI_En();  // CSN = 0
+    //SSI_Delay(SSI_BRR_DELAY);  // 等待稳定
+    asm(" RPT #3 || NOP");
+
+    // 确保初始时钟为高电平
+    SSI_CLK_H();    // CLK = 1
+    //SSI_Delay(SSI_BRR_DELAY);
+    asm(" RPT #3 || NOP");
+
+    SSI_CLK_L();    // CLK = 0
+    //SSI_Delay(SSI_BRR_DELAY);
+    asm(" RPT #10 || NOP");
+
+    SSI_CLK_H();    // CLK = 1
+    //SSI_Delay(SSI_BRR_DELAY);
+    asm(" RPT #5 || NOP");
+
+    // 读取23位数据
+    for(i = 0; i < ( SSI_DATA_BITS); i++)
+    {
+        // 产生时钟下降沿
+        SSI_CLK_L();  // CLK = 0
+        //SSI_Delay(SSI_BRR_DELAY);
+        asm(" RPT #3 || NOP");
+        // 在时钟下降沿读取数据位
+        if(SSI_DO_READ() == 1) {
+            data |= (1UL << (SSI_DATA_BITS -1 - i));  // 高位在前
+        }
+        // 产生时钟上升沿（从机在此时更新数据）
+        SSI_CLK_H();    // CLK = 1
+        //SSI_Delay(SSI_BRR_DELAY);
+        asm(" RPT #3 || NOP");
+    }
+    // 结束传输：拉高片选
+    SSI_Dis();  // CSN = 1
+    return ((uint16_t)data);
 }
 
+
+
+// SSI数据读取函数
+#pragma CODE_SECTION(SSI_ReadData1,"ramfuncs");
+uint16_t SSI_ReadData1(void)
+{
+    Uint32 data = 0;
+    Uint16 i;
+
+    // 启动传输：拉低片选
+    SSI_En1();  // CSN = 0
+    //SSI_Delay(SSI_BRR_DELAY);  // 等待稳定
+    asm(" RPT #3 || NOP");
+
+    // 确保初始时钟为高电平
+    SSI_CLK_H1();    // CLK = 1
+    //SSI_Delay(SSI_BRR_DELAY);
+    asm(" RPT #3 || NOP");
+
+    SSI_CLK_L1();    // CLK = 0
+    //SSI_Delay(SSI_BRR_DELAY);
+    asm(" RPT #10 || NOP");
+
+    SSI_CLK_H1();    // CLK = 1
+    //SSI_Delay(SSI_BRR_DELAY);
+    asm(" RPT #5 || NOP");
+
+    // 读取23位数据
+    for(i = 0; i < ( SSI_DATA_BITS); i++)
+    {
+        // 产生时钟下降沿
+        SSI_CLK_L1();  // CLK = 0
+        //SSI_Delay(SSI_BRR_DELAY);
+        asm(" RPT #3 || NOP");
+        // 在时钟下降沿读取数据位
+        if(SSI_DO_READ1() == 1) {
+            data |= (1UL << (SSI_DATA_BITS -1 - i));  // 高位在前
+        }
+        // 产生时钟上升沿（从机在此时更新数据）
+        SSI_CLK_H1();    // CLK = 1
+        //SSI_Delay(SSI_BRR_DELAY);
+        asm(" RPT #3 || NOP");
+    }
+    // 结束传输：拉高片选
+    SSI_Dis1();  // CSN = 1
+    return ((uint16_t)data);
+}
 
 /**
  * @brief 获取主编码器的原始值
@@ -93,9 +187,7 @@ Uint16 SPITransfer_ex(Uint16 data)
 #pragma CODE_SECTION(get_main_degree_raw,"ramfuncs");
 uint16_t get_main_degree_raw(void)
 {
-    uint16_t h_data = SPITransfer_main(0x8300); // 获取主编码器03寄存器的高8位值
-    uint16_t l_data = SPITransfer_main(0x8400); // 获取主编码器04寄存器的低6位值
-    return ((((h_data & 0x00FF) << 8) | (l_data & 0x00FF)) >> 2);
+    return SSI_ReadData();
 }
 
 /**
@@ -104,9 +196,7 @@ uint16_t get_main_degree_raw(void)
 #pragma CODE_SECTION(get_ex_degree_raw,"ramfuncs");
 uint16_t get_ex_degree_raw(void)
 {
-    uint16_t h_data = SPITransfer_ex(0x8300); // 获取主编码器03寄存器的高8位值
-    uint16_t l_data = SPITransfer_ex(0x8400); // 获取主编码器04寄存器的低6位值
-    return (16384 - ((((h_data & 0x00FF) << 8) | (l_data & 0x00FF)) >> 2));
+    return (16384 - SSI_ReadData1());
 }
 
 

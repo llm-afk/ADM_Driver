@@ -55,26 +55,26 @@ MOTOR_RATED_CUR = 1000£¬TORQUE_CUR_LIMIT = 150 À´ÔÚÈí¼þ²ãÃæÏÞÖÆµçÁ÷»·µÄÊä³ö¡£Í¬Ê
 ///////////////////////////////////////////////////////////////////////////////////////
 // ¿ØÖÆ°å²ÎÊýÉèÖÃ
 ///////////////////////////////////////////////////////////////////////////////////////
-unsigned int MAX_DC_VOL_3_3V        =  480;        //! 0.1vdc Ä¸ÏßµçÑ¹²É¼¯µÄ×î´óÁ¿³Ì ¸ù¾ÝÊµ¼ÊµÄÓ²¼þµçÂ·¾ö¶¨3VºÍ16±¶
-#define  MAX_PEAK_CUR_3_3V             4687        //! 0.01A // µçÁ÷²É¼¯µÄ×î´óÁ¿³Ì£¬ÓÉÔË·ÅÔöÒæºÍ²ÉÑùµç×è×èÖµ¹²Í¬¾ö¶¨ ¡À20A¾ÍÌî2000
+unsigned int MAX_DC_VOL_3_3V        =  630;        //! 0.1vdc Ä¸ÏßµçÑ¹²É¼¯µÄ×î´óÁ¿³Ì ¸ù¾ÝÊµ¼ÊµÄÓ²¼þµçÂ·¾ö¶¨3VºÍ16±¶
+#define  MAX_PEAK_CUR_3_3V             5000        //! 0.01A // µçÁ÷²É¼¯µÄ×î´óÁ¿³Ì£¬ÓÉÔË·ÅÔöÒæºÍ²ÉÑùµç×è×èÖµ¹²Í¬¾ö¶¨ ¡À20A¾ÍÌî2000
 unsigned long MAX_PEAK_CUR_3_3V_2   =  MAX_PEAK_CUR_3_3V;
 unsigned long MAX_PEAK_CUR_3_3V_410 =  ((long)MAX_PEAK_CUR_3_3V << 12) / 10;
 
-unsigned int OVER_DC_VOL_POINT    =  360;         //! 0.1vdc // Ä¸ÏßµçÑ¹¹ýÑ¹±£»¤ãÐÖµ ÇÐ¶ÏÊä³ö
-unsigned int OVER_DC_VOL_LIMIT    =  350;         //! 0.1vdc // Ä¸ÏßµçÑ¹¹ýÑ¹¿ØÖÆÏÞÖÆµã£¨·ÇÁ¢¼´±£»¤£©½µµÍµçÁ÷
-unsigned int UNDER_DC_VOL_POINT   =  170;         //! 0.1vdc // Ä¸ÏßµçÑ¹Ç·Ñ¹±£»¤ãÐÖµ 
+unsigned int OVER_DC_VOL_POINT    =  380;         //! 0.1vdc // Ä¸ÏßµçÑ¹¹ýÑ¹±£»¤ãÐÖµ ÇÐ¶ÏÊä³ö
+unsigned int OVER_DC_VOL_LIMIT    =  370;         //! 0.1vdc // Ä¸ÏßµçÑ¹¹ýÑ¹¿ØÖÆÏÞÖÆµã£¨·ÇÁ¢¼´±£»¤£©½µµÍµçÁ÷
+unsigned int UNDER_DC_VOL_POINT   =  140;         //! 0.1vdc // Ä¸ÏßµçÑ¹Ç·Ñ¹±£»¤ãÐÖµ 
 
 unsigned int  OVER_DC_VOL_KP      =  800;
 unsigned int MaxAllowUdcLimit     =  170;
 unsigned int MidAllowUdcLimit     =  155;
 
-#define DEAD_TIME                    20          // ÉèÖÃËÀÇøÊ±¼ä£¬Êµ¼ÊµÄÉÏÏÂ¹ÜµÄËÀÇøÊ±¼äÊÇ DEAD_TIME+20 µ¥Î»0.01us
+#define DEAD_TIME                    40          // ÉèÖÃËÀÇøÊ±¼ä£¬Êµ¼ÊµÄÉÏÏÂ¹ÜµÄËÀÇøÊ±¼äÊÇ DEAD_TIME+20 µ¥Î»0.01us
 #define DEAD_COMPENATION_TIME        0           // ËÀÇø²¹³¥Ê±¼ä£¬0.25US
 unsigned int DeadTimeInternal     =  ((long)DEAD_TIME * DSP_CLOCK) / 100;               // ËÀÇøÊ±¼ä
 unsigned int DeadTimeCompInternal =  ((long)DEAD_COMPENATION_TIME * DSP_CLOCK) / 100;   // ËÀÇø²¹³¥Ê±¼ä
 
-#define HARDWARE_OVER_CUR            (MAX_PEAK_CUR_3_3V *0.99f) //! Ó²¼þ±È½ÏÆ÷µÄ¹ýÁ÷ãÐÖµ£¬¸ù¾ÝÓ²¼þÉè¼Æ¾ö¶¨
-#define HARDWARE_CBC_CUR             7000                                // CBC¹ýÁ÷±È½ÏÖµ, 8.00A Öð²¨ÏÞÁ÷Êµ¼ÊÃ»ÓÐÓÃµ½
+#define HARDWARE_OVER_CUR            (MAX_PEAK_CUR_3_3V *0.98f) //! Ó²¼þ±È½ÏÆ÷µÄ¹ýÁ÷ãÐÖµ£¬¸ù¾ÝÓ²¼þÉè¼Æ¾ö¶¨
+#define HARDWARE_CBC_CUR             (MAX_PEAK_CUR_3_3V *0.95f) // CBC¹ýÁ÷±È½ÏÖµ, 8.00A Öð²¨ÏÞÁ÷Êµ¼ÊÃ»ÓÐÓÃµ½
 unsigned int OverCurPointInternal =  ((long)HARDWARE_OVER_CUR << 9) / MAX_PEAK_CUR_3_3V + 512;   // Ó²¼þ¹ýÁ÷±È½ÏÖµ
 unsigned int CBCCurPointInternal  =  ((long)HARDWARE_CBC_CUR  << 9) / MAX_PEAK_CUR_3_3V + 512;   // CBC¹ýÁ÷±È½ÏÖµ
 
@@ -82,8 +82,8 @@ unsigned int CBCCurPointInternal  =  ((long)HARDWARE_CBC_CUR  << 9) / MAX_PEAK_C
 // µç»ú²ÎÊýÉèÖÃ
 ///////////////////////////////////////////////////////////////////////////////////////
 unsigned int MOTOR_RATED_POWER  =  2000;    //0.1WÎªµ¥Î»
-unsigned int MOTOR_RATED_VOL    =  17;  //! ÏàµçÑ¹µÄÓÐÐ§Öµ£¬ÊäÈëÊµ¼ÊµÄÄ¸ÏßµçÑ¹/1.414
-unsigned int MOTOR_RATED_CUR    =  300; //! 20AµÄ¶î¶¨µçÁ÷£¬ÕâÀïÊÇ¶î¶¨
+unsigned int MOTOR_RATED_VOL    =  21;  //! ÏàµçÑ¹µÄÓÐÐ§Öµ£¬ÊäÈëÊµ¼ÊµÄÄ¸ÏßµçÑ¹/1.414
+unsigned int MOTOR_RATED_CUR    =  500; //! 20AµÄ¶î¶¨µçÁ÷£¬ÕâÀïÊÇ¶î¶¨
 unsigned int LOWER_LIMIT_FREQ   =  0;
 
 unsigned int PMSM_LD            =  270;//250;//30;//150;//432;          // 37uH
@@ -131,10 +131,10 @@ unsigned int HIGH_SPEED_KP_GAIN     =  10;
 ///////////////////////////////////////////////////////////////////////////////////////
 // µçÁ÷»·»·²ÎÊýÉèÖÃ
 ///////////////////////////////////////////////////////////////////////////////////////
-unsigned int D_CUR_KI               =  70; // !
-unsigned int D_CUR_KP               =  0;  // !
-unsigned int Q_CUR_KI               =  70; // !
-unsigned int Q_CUR_KP               =  0;  // !
+unsigned int D_CUR_KI               =  2000; // !
+unsigned int D_CUR_KP               =  1200;  // !
+unsigned int Q_CUR_KI               =  2000; // !
+unsigned int Q_CUR_KP               =  1200;  // !
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // ¿ØÖÆ²ÎÊýÉèÖÃ

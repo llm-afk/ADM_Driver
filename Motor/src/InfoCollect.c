@@ -378,7 +378,7 @@ void SVPWM_3ShuntGetPhaseCurrent(void)
 
     int CurSelection;
 #if (CURRENT_SAMPLE_TYPE == CURRENT_SAMPLE_2SHUNT)
-    CurSelection = V_W_CUR_SEN;
+    CurSelection = U_V_CUR_SEN;//V_W_CUR_SEN;
 #else
     CurSelection = GetPWMSector();
 #endif

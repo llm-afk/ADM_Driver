@@ -38,7 +38,7 @@ void main(void)
     stimer_addTask(&stimer_main, 0, 1, 0, KickDog);
     stimer_addTask(&stimer_main, 1, 1, 0, MC_servo_loop);
     stimer_addTask(&stimer_main, 2, 1, 0, can_com_loop);
-    stimer_addTask(&stimer_main, 3, 2, 1, info_collect_loop);
+    stimer_addTask(&stimer_main, 3, 20,1, info_collect_loop);
     stimer_addTask(&stimer_main, 4, 1, 0, SystemLeve05msMotor);
     stimer_addTask(&stimer_main, 5, 1, 0, SystemLeve05msFunction);
     stimer_addTask(&stimer_main, 6, 4, 0, SystemLeve2msMotor);
@@ -85,7 +85,7 @@ interrupt void ZeroOfEPWMISR(void)
 
     #if(DEBUG == 1)
     static uint16_t cnt = 0;
-    debug_buffer[cnt] = 0;
+    debug_buffer[cnt] = gIMT.M;
     cnt++;
     cnt%=2000;
     #endif

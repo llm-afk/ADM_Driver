@@ -48,8 +48,6 @@ static uint16_t get_eeprom_key_from_index(uint16_t idx)
     }
 }
 
-
-
 static OD_entry_t *find_entry(uint16_t index)
 {
     uint16_t min = 0;

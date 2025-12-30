@@ -9,5 +9,6 @@
 #define CLAMP(x, min, max) (((x) > (max)) ? (max) : (((x) < (min)) ? (min) : (x)))
 
 uint32_t square(uint64_t x);
+float logf(float x);
 
 #endif

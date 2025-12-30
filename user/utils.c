@@ -26,3 +26,10 @@ uint32_t square(uint64_t x)
 
     return (uint32_t)res;
 }
+
+float logf(float x)
+{
+    float y = (x-1)/(x+1);
+    float y2 = y*y;
+    return 2*(y + y*y2/3 + y*y2*y2/5);  // 5阶展开
+}

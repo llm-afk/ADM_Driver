@@ -136,13 +136,14 @@ extern "C" {
 #define ADC_IW               (AdcResult.ADCRESULT0<<4)
 #define ADC_UDC              (AdcResult.ADCRESULT2<<4)
 #endif
+#define ADC_IBUS            (AdcResult.ADCRESULT3)
+#define ADC_NTC             (AdcResult.ADCRESULT4)
+#define ADC_NTC_M           (AdcResult.ADCRESULT5)
 
 #define ADC_DSP_TEMP        (AdcResult.ADCRESULT3)
 #define ADCRESULT_UU        (AdcResult.ADCRESULT4)
 #define ADCRESULT_UV        (AdcResult.ADCRESULT5)
 #define ADCRESULT_UW        (AdcResult.ADCRESULT6)
-
-#define ADC_IBUS            (AdcResult.ADCRESULT7)
 
 #define	ADC_VSP				(AdcResult.ADCRESULT6)
 #define	ADC_TEMP			(AdcResult.ADCRESULT3)

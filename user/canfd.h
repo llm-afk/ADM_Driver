@@ -35,6 +35,7 @@
 
 #define MSG_ID_RPDO_5       0x100 
 #define MSG_ID_TPDO_5       0x190  
+#define MSG_ID_RPDO_6       0x400 
 
 #define MSG_ID_DFU          0x680 
 
