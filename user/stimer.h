@@ -25,7 +25,7 @@ typedef struct{
 
 void stimer_init(stimer_t *stimer);
 void stimer_addTask(stimer_t *stimer, uint16_t priority, uint16_t period, uint16_t phase, taskCallback_t taskCallback);
-void stimer_heartbeat(stimer_t *stimer);
+void stimer_heartBeat(stimer_t *stimer);
 void stimer_loop(stimer_t *stimer);
 
 #endif

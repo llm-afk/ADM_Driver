@@ -80,7 +80,7 @@ interrupt void ZeroOfEPWMISR(void)
     if(++stimer_main_cnt >= 10)
     {
         stimer_main_cnt = 0;
-        stimer_heartbeat(&stimer_main); // 2Khz的心跳频率
+        stimer_heartBeat(&stimer_main); // 2Khz的心跳频率
     }
 
     #if(DEBUG == 1)

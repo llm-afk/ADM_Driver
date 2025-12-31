@@ -79,10 +79,10 @@ void MC_servo_loop(void)
                     + (int32_t)((int64_t)motor_ctrl.current_ref_q14 * 40960 / MOTOR_RATED_CUR);
 
 
-            // out_q14 = CLAMP(out_q14, -67108864, 67108864); // 4096 * 16384
+            out_q14 = CLAMP(out_q14, -67108864, 67108864); // 4096 * 16384
             
-            // Iq = out_q14 >> 14; 
-            // Id = 0;
+            Iq = out_q14 >> 14; 
+            Id = 0;
             break;
         }
         case ENCODER_CALIBRATE: 

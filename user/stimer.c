@@ -29,7 +29,7 @@ void stimer_addTask(stimer_t *stimer, uint16_t priority, uint16_t period, uint16
  * @brief 需要定时1ms执行以驱动模块运行
  * @param stimer 控制块指针
  */
-void stimer_heartbeat(stimer_t *stimer)
+void stimer_heartBeat(stimer_t *stimer)
 {
     stimer->tick_counter++;
 }
