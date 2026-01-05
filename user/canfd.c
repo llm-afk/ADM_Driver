@@ -53,10 +53,10 @@ static void canfd_config_baudRate(uint16_t lowSpeed, uint16_t highSpeed)
         case 1:
         {
             // Arbitration Phase：1M @ 75%
-            CanfdRegs.S_CFG.bit.S_PRESC = 4;  
-            CanfdRegs.S_SEG.bit.S_Seg_1 = 13; 
+            CanfdRegs.S_CFG.bit.S_PRESC = 4; // canfd_clk = 100M / (PRESC + 1)
+            CanfdRegs.S_SEG.bit.S_Seg_1 = 13; // canfd_bandrate = canfd_clk / (F_Seg_1 + 2 + F_Seg_2 + 1)
             CanfdRegs.S_SEG.bit.S_Seg_2 = 4;  
-            CanfdRegs.S_CFG.bit.S_SJW   = 2; 
+            CanfdRegs.S_CFG.bit.S_SJW   = 2; // sjw < Seg_2
         }
         default :
         {
@@ -68,10 +68,10 @@ static void canfd_config_baudRate(uint16_t lowSpeed, uint16_t highSpeed)
         case 4:
         {
             // Data Phase：4M @ 80%
-            CanfdRegs.F_CFG.bit.F_PRESC = 0; 
-            CanfdRegs.F_SEG.bit.F_Seg_1 = 11;     
+            CanfdRegs.F_CFG.bit.F_PRESC = 0; // canfd_clk = 100M / (PRESC + 1)
+            CanfdRegs.F_SEG.bit.F_Seg_1 = 11; // canfd_bandrate = canfd_clk / (F_Seg_1 + 2 + F_Seg_2 + 1)
             CanfdRegs.F_SEG.bit.F_Seg_2 = 11;    
-            CanfdRegs.F_CFG.bit.F_SJW   = 3;     
+            CanfdRegs.F_CFG.bit.F_SJW   = 4; // sjw < Seg_2     
         }
         default :
         {
@@ -112,11 +112,11 @@ void canfd_init(void)
     canfd_config_baudRate(1, 4);
 
     // filter
-    canfd_config_filter_low7_dual(0, ODObjs.node_id);
+    //canfd_config_filter_low7_dual(0, ODObjs.node_id);
 
     // TDC
     CanfdRegs.DELAY_EALCAP.bit.TDCEN = 1;
-    CanfdRegs.DELAY_EALCAP.bit.SSPOFF = 5;
+    CanfdRegs.DELAY_EALCAP.bit.SSPOFF = 0;
 
     CanfdRegs.CFG_STAT.bit.RESET = 0;
     
@@ -182,8 +182,11 @@ interrupt void canfd_IsrHander1(void)
                 canFrame_t canFrame_temp = {0};
                 canFrame_temp.id = CanfdRegs.RBUF.RID0.bit.ID0; 
                 canFrame_temp.len = CANFD_DLC_TO_LEN(CanfdRegs.RBUF.RIDST.bit.DLC);
-                memcpy(canFrame_temp.data, CanfdRegs.RBUF.DATA, ((canFrame_temp.len + 1) >> 1)); 
-                ringbuffer_in(&canFrameRxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
+                if((GET_NODE_ID(canFrame_temp.id) == ODObjs.node_id) || (GET_NODE_ID(canFrame_temp.id) == 0)) // 硬件过滤器失效了，临时加一个软件层面的id滤波器
+                {
+                    memcpy(canFrame_temp.data, CanfdRegs.RBUF.DATA, ((canFrame_temp.len + 1) >> 1)); 
+                    ringbuffer_in(&canFrameRxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
+                }
             }
             CanfdRegs.TCTRL.bit.RREL = 1; // 释放一个槽位
         }

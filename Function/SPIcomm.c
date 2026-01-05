@@ -76,17 +76,6 @@ void InitSpi(void)
     GpioDataRegs.GPBDAT.bit.GPIO32 = 1;
 }
 
-// 简单的延时函数
-static void SSI_Delay(Uint16 Count)
-{
-    //Uint16 i;
-   /* for(i = 0; i < Count; i++) {
-        asm(" NOP");
-    }
-   */
-    asm(" RPT #1 || NOP");
-}
-
 // SSI数据读取函数
 #pragma CODE_SECTION(SSI_ReadData,"ramfuncs");
 uint16_t SSI_ReadData(void)
@@ -96,20 +85,16 @@ uint16_t SSI_ReadData(void)
 
     // 启动传输：拉低片选
     SSI_En();  // CSN = 0
-    //SSI_Delay(SSI_BRR_DELAY);  // 等待稳定
     asm(" RPT #3 || NOP");
 
     // 确保初始时钟为高电平
     SSI_CLK_H();    // CLK = 1
-    //SSI_Delay(SSI_BRR_DELAY);
     asm(" RPT #3 || NOP");
 
     SSI_CLK_L();    // CLK = 0
-    //SSI_Delay(SSI_BRR_DELAY);
     asm(" RPT #10 || NOP");
 
     SSI_CLK_H();    // CLK = 1
-    //SSI_Delay(SSI_BRR_DELAY);
     asm(" RPT #5 || NOP");
 
     // 读取23位数据
@@ -117,7 +102,6 @@ uint16_t SSI_ReadData(void)
     {
         // 产生时钟下降沿
         SSI_CLK_L();  // CLK = 0
-        //SSI_Delay(SSI_BRR_DELAY);
         asm(" RPT #3 || NOP");
         // 在时钟下降沿读取数据位
         if(SSI_DO_READ() == 1) {
@@ -125,15 +109,12 @@ uint16_t SSI_ReadData(void)
         }
         // 产生时钟上升沿（从机在此时更新数据）
         SSI_CLK_H();    // CLK = 1
-        //SSI_Delay(SSI_BRR_DELAY);
         asm(" RPT #3 || NOP");
     }
     // 结束传输：拉高片选
     SSI_Dis();  // CSN = 1
     return ((uint16_t)data);
 }
-
-
 
 // SSI数据读取函数
 #pragma CODE_SECTION(SSI_ReadData1,"ramfuncs");
@@ -144,20 +125,16 @@ uint16_t SSI_ReadData1(void)
 
     // 启动传输：拉低片选
     SSI_En1();  // CSN = 0
-    //SSI_Delay(SSI_BRR_DELAY);  // 等待稳定
     asm(" RPT #3 || NOP");
 
     // 确保初始时钟为高电平
     SSI_CLK_H1();    // CLK = 1
-    //SSI_Delay(SSI_BRR_DELAY);
     asm(" RPT #3 || NOP");
 
     SSI_CLK_L1();    // CLK = 0
-    //SSI_Delay(SSI_BRR_DELAY);
     asm(" RPT #10 || NOP");
 
     SSI_CLK_H1();    // CLK = 1
-    //SSI_Delay(SSI_BRR_DELAY);
     asm(" RPT #5 || NOP");
 
     // 读取23位数据
@@ -165,7 +142,6 @@ uint16_t SSI_ReadData1(void)
     {
         // 产生时钟下降沿
         SSI_CLK_L1();  // CLK = 0
-        //SSI_Delay(SSI_BRR_DELAY);
         asm(" RPT #3 || NOP");
         // 在时钟下降沿读取数据位
         if(SSI_DO_READ1() == 1) {
@@ -173,7 +149,6 @@ uint16_t SSI_ReadData1(void)
         }
         // 产生时钟上升沿（从机在此时更新数据）
         SSI_CLK_H1();    // CLK = 1
-        //SSI_Delay(SSI_BRR_DELAY);
         asm(" RPT #3 || NOP");
     }
     // 结束传输：拉高片选
@@ -198,5 +173,3 @@ uint16_t get_ex_degree_raw(void)
 {
     return (16384 - SSI_ReadData1());
 }
-
-

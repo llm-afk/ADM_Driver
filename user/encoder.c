@@ -27,20 +27,28 @@ void encoder_init(void)
         encoder.enc_error_conf += ENCODER_CPR; 
     }
 
+    // **关键修复：等待编码器芯片上电稳定**
+    // 编码器芯片通常需要10-50ms的上电复位时间
+    // 延时约50ms (假设100MHz CPU时钟，大约5,000,000个NOP周期)
+    volatile uint32_t i;
+    for(i = 0; i < 5000000; i++) {
+        asm(" NOP");
+    }
+
     // 更新主编码器和副编码器角度
-    encoder.enc_degree_raw = get_main_degree_raw();
-    encoder.ex_enc_degree_raw = get_ex_degree_raw();
+    uint16_t enc_temp = get_main_degree_raw();
+    uint16_t ex_enc_temp = get_ex_degree_raw();
 
     // 修正编码器旋转方向
     if(encoder_config.encoder_reverse)
     {
-        encoder.enc_degree_raw = ENCODER_CPR - 1 - encoder.enc_degree_raw;
-        encoder.ex_enc_degree_raw = ENCODER_CPR - 1 - encoder.ex_enc_degree_raw;
+        enc_temp = ENCODER_CPR - 1 - enc_temp;
+        ex_enc_temp = ENCODER_CPR - 1 - ex_enc_temp;
     }
 
     // 记录上电时刻两个编码器的值
-    encoder.in_enc_deg_zero = encoder.enc_degree_raw;
-    encoder.ex_enc_deg_zero = encoder.ex_enc_degree_raw;
+    encoder.in_enc_deg_zero = enc_temp;
+    encoder.ex_enc_deg_zero = ex_enc_temp;
     encoder.enc_error = encoder.in_enc_deg_zero - encoder.ex_enc_deg_zero;
     if(encoder.enc_error > ENCODER_CPR_DIV) 
     {
@@ -70,15 +78,16 @@ void encoder_init(void)
 #pragma CODE_SECTION(encoder_loop,"ramfuncs");
 void encoder_loop(void)
 {
-    // 更新主编码器和副编码器角度
-    encoder.enc_degree_raw = get_main_degree_raw();
-    encoder.ex_enc_degree_raw = get_ex_degree_raw();
-
-    // 修正编码器旋转方向
+    // 更新主编码器和副编码器角度并修正方向
     if(encoder_config.encoder_reverse)
     {
-        encoder.enc_degree_raw = ENCODER_CPR - 1 - encoder.enc_degree_raw;
-        encoder.ex_enc_degree_raw = ENCODER_CPR - 1 - encoder.ex_enc_degree_raw;
+        encoder.enc_degree_raw = ENCODER_CPR - 1 - get_main_degree_raw();
+        encoder.ex_enc_degree_raw = ENCODER_CPR - 1 - get_ex_degree_raw();
+    }
+    else
+    {
+        encoder.enc_degree_raw = get_main_degree_raw();
+        encoder.ex_enc_degree_raw = get_ex_degree_raw();
     }
 
     // 时刻更新主编码器值和副编码器值为了应对编码器标零时需要读取当前的角度值
@@ -121,8 +130,8 @@ void encoder_loop(void)
     {
         int16_t elec_raw = (int16_t)((encoder.enc_degree_lined & 0x7FF) - encoder_config.elec_degree_calib);
         if(elec_raw < 0)elec_raw += 2048;
-
         encoder.elec_degree = ((uint16_t)elec_raw << 5);
+
         if(encoder_config.encoder_reverse == 0)
         {
             encoder.elec_degree = 65535 - encoder.elec_degree;
@@ -145,7 +154,7 @@ uint16_t encoder_calibrate(void)
         case 0: // lock
         {
             Iq = 0;
-            Id = 1024;
+            Id = cnt;
             encoder.elec_degree = 0;
             if(cnt >= 1000)
             {
@@ -157,11 +166,11 @@ uint16_t encoder_calibrate(void)
         }
         case 1: // cw find direction
         {
-            encoder.elec_degree += 256; // 旋转4个电周期
-            if(cnt >= 1024)
+            encoder.elec_degree += 256; // 旋转2个电周期
+            if(cnt >= 512)
             {
-                int16_t degree_dif = (int16_t)(encoder.enc_degree_raw - enc_degree_raw);
-                if (degree_dif > ENCODER_CPR_DIV) 
+                int32_t degree_dif = (int32_t)((int32_t)encoder.enc_degree_raw - enc_degree_raw);
+                if(degree_dif > ENCODER_CPR_DIV) 
                 {
                     degree_dif -= ENCODER_CPR;
                 } 
@@ -189,7 +198,7 @@ uint16_t encoder_calibrate(void)
         case 2: // lock
         {
             Iq = 0;
-            Id = 1024;
+            Id = 1024 - cnt;
             encoder.elec_degree = 0;
             if(cnt == 500)
             {
@@ -197,7 +206,6 @@ uint16_t encoder_calibrate(void)
             }
             else if(cnt >= 1000)
             {
-                enc_degree_raw = encoder.enc_degree_raw;
                 cnt = 0;
                 state = 3;
             }

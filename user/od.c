@@ -139,8 +139,8 @@ uint16_t OD_write_1(uint16_t idx, uint16_t *data)
     
     if((entry != NULL) && (entry->attribute & ATTR_W) && (entry->datasize == 1))
     {
-        if(__byte(entry->obj, 0) != __byte(data, 0))
-        {
+        // if(__byte(entry->obj, 0) != __byte(data, 0))
+        // {
             __byte(entry->obj, 0) = __byte(data, 0);
             if(entry->attribute & ATTR_ROM)
             {
@@ -151,11 +151,11 @@ uint16_t OD_write_1(uint16_t idx, uint16_t *data)
             {
                 cs = CS_W_ACK;
             }
-        }
-        else
-        {
-            cs = CS_W_ACK;
-        }
+        // }
+        // else
+        // {
+        //     cs = CS_W_ACK;
+        // }
     }
 
     if(cs == CS_W_ACK && entry->update_func != NULL) 
@@ -178,8 +178,8 @@ uint16_t OD_write_2(uint16_t idx, uint16_t *data)
     
     if((entry != NULL) && (entry->attribute & ATTR_W) && (entry->datasize == 2))
     {
-        if(*(uint16_t *)entry->obj != *(uint16_t *)data)
-        {
+        // if(*(uint16_t *)entry->obj != *(uint16_t *)data)
+        // {
             *(uint16_t *)entry->obj = *(uint16_t *)data;
             if(entry->attribute & ATTR_ROM)
             {
@@ -190,11 +190,11 @@ uint16_t OD_write_2(uint16_t idx, uint16_t *data)
             {
                 cs = CS_W_ACK;
             }
-        }
-        else
-        {
-            cs = CS_W_ACK;
-        }
+        // }
+        // else
+        // {
+        //     cs = CS_W_ACK;
+        // }
     }
     
     if(cs == CS_W_ACK && entry->update_func != NULL) 
@@ -217,8 +217,8 @@ uint16_t OD_write_4(uint16_t idx, uint16_t *data)
     
     if((entry != NULL) && (entry->attribute & ATTR_W) && (entry->datasize == 4))
     {
-        if(*(uint32_t *)entry->obj != *(uint32_t *)data)
-        {
+        // if(*(uint32_t *)entry->obj != *(uint32_t *)data)
+        // {
             *(uint32_t *)entry->obj = *(uint32_t *)data;
             if(entry->attribute & ATTR_ROM)
             {
@@ -229,11 +229,11 @@ uint16_t OD_write_4(uint16_t idx, uint16_t *data)
             {
                 cs = CS_W_ACK;
             }
-        }
-        else
-        {
-            cs = CS_W_ACK;
-        }
+        // }
+        // else
+        // {
+        //     cs = CS_W_ACK;
+        // }
     }
     
     if(cs == CS_W_ACK && entry->update_func != NULL) 
