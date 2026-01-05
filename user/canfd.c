@@ -24,21 +24,21 @@ void canfd_ringbuffer_init(void)
  * @param id1 需要匹配的ID的低7位数值 (0x00 ~ 0x7F)
  * @param id2 需要匹配的ID的低7位数值 (0x00 ~ 0x7F)
  */
-static void canfd_config_filter_low7_dual(uint16_t id1, uint16_t id2)
+static inline void canfd_config_filter_low7_dual(uint16_t id1, uint16_t id2)
 {
-    CanfdRegs.CIA_ACF_CFG.bit.ACFADR = 0; // 配置滤波器0
-    CanfdRegs.CIA_ACF_CFG.bit.SELMASK = 1;// 切换到配置掩码
-    CanfdRegs.ACF_0.all = 0xFF80;         // 配置掩码为低7位        
-    CanfdRegs.CIA_ACF_CFG.bit.SELMASK = 0;// 配置掩码匹配值
-    CanfdRegs.ACF_0.all = (id1 & 0x007F); // 配置低7位的掩码匹配值为id1
-    CanfdRegs.ACF_EN.bit.AE_0 = 1;        // 使能滤波器0
-
-    CanfdRegs.CIA_ACF_CFG.bit.ACFADR = 1; // 配置滤波器1
-    CanfdRegs.CIA_ACF_CFG.bit.SELMASK = 1;// 切换到配置掩码
-    CanfdRegs.ACF_0.all = 0xFF80;         // 配置掩码为低7位        
-    CanfdRegs.CIA_ACF_CFG.bit.SELMASK = 0;// 配置掩码匹配值
-    CanfdRegs.ACF_0.all = (id2 & 0x007F); // 配置低7位的掩码匹配值为id2
-    CanfdRegs.ACF_EN.bit.AE_1 = 1;        // 使能滤波器1
+    CanfdRegs.ACF_EN.bit.AE_0 = 1;        // 使能过滤器0
+    CanfdRegs.CIA_ACF_CFG.bit.ACFADR = 0; // 选择过滤器0
+    CanfdRegs.CIA_ACF_CFG.bit.SELMASK = 0;// 寄存器ACF_x指向接收代码
+    CanfdRegs.ACF_0.all = (id1 & 0x007F); // 设置匹配值
+    CanfdRegs.CIA_ACF_CFG.bit.SELMASK = 1;// 寄存器ACF_x指向接收掩码。
+    CanfdRegs.ACF_0.all = 0xFF80;         // 设置掩码
+    
+    CanfdRegs.ACF_EN.bit.AE_1 = 1;        // 使能过滤器1
+    CanfdRegs.CIA_ACF_CFG.bit.ACFADR = 1; // 选择过滤器1
+    CanfdRegs.CIA_ACF_CFG.bit.SELMASK = 0;// 寄存器ACF_x指向接收代码
+    CanfdRegs.ACF_0.all = (id2 & 0x007F); // 设置匹配值
+    CanfdRegs.CIA_ACF_CFG.bit.SELMASK = 1;// 寄存器ACF_x指向接收掩码。
+    CanfdRegs.ACF_0.all = 0xFF80;         // 设置掩码
 }
 
 /**
@@ -46,7 +46,7 @@ static void canfd_config_filter_low7_dual(uint16_t id1, uint16_t id2)
  * @param lowSpeed 低速的仲裁段的波特率
  * @param highSpeed 高速的数据段的波特率
  */
-static void canfd_config_baudRate(uint16_t lowSpeed, uint16_t highSpeed)
+static inline void canfd_config_baudRate(uint16_t lowSpeed, uint16_t highSpeed)
 {
     switch(lowSpeed)
     {
@@ -71,7 +71,7 @@ static void canfd_config_baudRate(uint16_t lowSpeed, uint16_t highSpeed)
             CanfdRegs.F_CFG.bit.F_PRESC = 0; // canfd_clk = 100M / (PRESC + 1)
             CanfdRegs.F_SEG.bit.F_Seg_1 = 11; // canfd_bandrate = canfd_clk / (F_Seg_1 + 2 + F_Seg_2 + 1)
             CanfdRegs.F_SEG.bit.F_Seg_2 = 11;    
-            CanfdRegs.F_CFG.bit.F_SJW   = 4; // sjw < Seg_2     
+            CanfdRegs.F_CFG.bit.F_SJW   = 1; // sjw < Seg_2     
         }
         default :
         {
@@ -112,7 +112,7 @@ void canfd_init(void)
     canfd_config_baudRate(1, 4);
 
     // filter
-    //canfd_config_filter_low7_dual(0, ODObjs.node_id);
+    canfd_config_filter_low7_dual(0, ODObjs.node_id);
 
     // TDC
     CanfdRegs.DELAY_EALCAP.bit.TDCEN = 1;
@@ -182,11 +182,8 @@ interrupt void canfd_IsrHander1(void)
                 canFrame_t canFrame_temp = {0};
                 canFrame_temp.id = CanfdRegs.RBUF.RID0.bit.ID0; 
                 canFrame_temp.len = CANFD_DLC_TO_LEN(CanfdRegs.RBUF.RIDST.bit.DLC);
-                if((GET_NODE_ID(canFrame_temp.id) == ODObjs.node_id) || (GET_NODE_ID(canFrame_temp.id) == 0)) // 硬件过滤器失效了，临时加一个软件层面的id滤波器
-                {
-                    memcpy(canFrame_temp.data, CanfdRegs.RBUF.DATA, ((canFrame_temp.len + 1) >> 1)); 
-                    ringbuffer_in(&canFrameRxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
-                }
+                memcpy(canFrame_temp.data, CanfdRegs.RBUF.DATA, ((canFrame_temp.len + 1) >> 1)); 
+                ringbuffer_in(&canFrameRxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
             }
             CanfdRegs.TCTRL.bit.RREL = 1; // 释放一个槽位
         }
