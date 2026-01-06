@@ -25,7 +25,6 @@ void main(void)
     InitPeripherals();             
     InitForMotorApp();        
     InitForFunctionApp();
-
     OD_init(); // 先初始化OD对象,初始化参数默认值
 
     eeprom_init();
@@ -37,7 +36,7 @@ void main(void)
     stimer_init(&stimer_main);
     stimer_addTask(&stimer_main, 0, 1, 0, KickDog);
     stimer_addTask(&stimer_main, 1, 1, 0, MC_servo_loop);
-    stimer_addTask(&stimer_main, 2, 1, 0, can_com_loop);
+    //stimer_addTask(&stimer_main, 2, 1, 0, can_com_loop);
     stimer_addTask(&stimer_main, 3, 20,1, info_collect_loop);
     stimer_addTask(&stimer_main, 4, 1, 0, SystemLeve05msMotor);
     stimer_addTask(&stimer_main, 5, 1, 0, SystemLeve05msFunction);
@@ -51,6 +50,7 @@ void main(void)
     while(1)
     {
         stimer_loop(&stimer_main);
+        can_com_loop();
     }
 }
 

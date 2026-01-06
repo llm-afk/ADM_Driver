@@ -68,7 +68,7 @@ unsigned int  OVER_DC_VOL_KP      =  800;
 unsigned int MaxAllowUdcLimit     =  170;
 unsigned int MidAllowUdcLimit     =  155;
 
-#define DEAD_TIME                    20          // 设置死区时间，实际的上下管的死区时间是 DEAD_TIME+20 单位0.01us
+#define DEAD_TIME                    30          // 设置死区时间，实际的上下管的死区时间是 DEAD_TIME+20 单位0.01us
 #define DEAD_COMPENATION_TIME        0           // 死区补偿时间，0.25US
 unsigned int DeadTimeInternal     =  ((long)DEAD_TIME * DSP_CLOCK) / 100;               // 死区时间
 unsigned int DeadTimeCompInternal =  ((long)DEAD_COMPENATION_TIME * DSP_CLOCK) / 100;   // 死区补偿时间
