@@ -10,6 +10,8 @@ uint16_t canFrameRxBuffer[512]    = {0}; // 接收ringbuffer缓冲区
 ringbuffer_t canFrameTxRingbuffer = {0}; // 发送ringbuffer控制块
 uint16_t canFrameTxBuffer[512]    = {0}; // 发送ringbuffer缓冲区 
 
+uint16_t m_node_id = 0;
+
 /**
  * @brief 初始化canfd协议需要的环形缓冲区
  */
@@ -77,17 +79,19 @@ static inline void canfd_config_baudRate(uint16_t lowSpeed, uint16_t highSpeed)
  */
 void canfd_init(void)
 {
+    m_node_id = ODObjs.node_id;
+
     // gpio
     EALLOW;
-#if 1
+    #if 1
     GpioCtrlRegs.GPAPUD.bit.GPIO28 = 1;      // CANFD_Rx
     GpioCtrlRegs.GPAPUD.bit.GPIO29 = 1;     // CANFD_Tx
     AnalogRegs.PIN_MUX_FLASH.bit.canfd_gpio_mux = 0xA;   //GPIO0 CANFDRXD ; GPIO32 CANFDTXD
-#else
+    #else
     GpioCtrlRegs.GPAPUD.bit.GPIO0 = 1;      // CANFD_Rx
     GpioCtrlRegs.GPBPUD.bit.GPIO32 = 1;     // CANFD_Tx
     AnalogRegs.PIN_MUX_FLASH.bit.canfd_gpio_mux = 0x5;   //GPIO0 CANFDRXD ; GPIO32 CANFDTXD
-#endif
+    #endif
 
     GpioCtrlRegs.GPBPUD.bit.GPIO34 = 0;  
     GpioCtrlRegs.GPBMUX1.bit.GPIO34 = 0;
@@ -104,7 +108,7 @@ void canfd_init(void)
     canfd_config_baudRate(1, 4);
 
     // filter
-    canfd_config_filter_low7_dual(ODObjs.node_id);
+    //canfd_config_filter_low7_dual(m_node_id);
 
     // TDC
     CanfdRegs.DELAY_EALCAP.bit.TDCEN = 1;
@@ -174,8 +178,11 @@ interrupt void canfd_IsrHander1(void)
                 canFrame_t canFrame_temp = {0};
                 canFrame_temp.id = CanfdRegs.RBUF.RID0.bit.ID0; 
                 canFrame_temp.len = CANFD_DLC_TO_LEN(CanfdRegs.RBUF.RIDST.bit.DLC);
-                memcpy(canFrame_temp.data, CanfdRegs.RBUF.DATA, ((canFrame_temp.len + 1) >> 1)); 
-                ringbuffer_in(&canFrameRxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
+                if(GET_NODE_ID(canFrame_temp.id) == m_node_id) // canfd硬件id过滤器有概率失效所以统一成软件过滤
+                {
+                    memcpy(canFrame_temp.data, CanfdRegs.RBUF.DATA, ((canFrame_temp.len + 1) >> 1));
+                    ringbuffer_in(&canFrameRxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
+                }
             }
             CanfdRegs.TCTRL.bit.RREL = 1; // 释放一个槽位
         }
@@ -222,7 +229,7 @@ static void parse_frame(canFrame_t *frame)
                     __byte(frame->data, 0) = OD_write_4(idx, data);
                 }
 
-                frame->id = MSG_ID_SDO_SRV + ODObjs.node_id;
+                frame->id = MSG_ID_SDO_SRV + m_node_id;
                 enqueue_tx_frame(frame);
             }
             break;   
@@ -237,7 +244,7 @@ static void parse_frame(canFrame_t *frame)
             motor_ctrl.Kd_q14           = ((uint32_t)(*(uint16_t*)&frame->data[7])) * 164; // q14格式缩放100倍
 
             // 数据上报
-            frame->id = MSG_ID_TPDO_5 + ODObjs.node_id;    
+            frame->id = MSG_ID_TPDO_5 + m_node_id;    
             frame->len = 16; 
             if(ODObjs.error_code) 
             {
@@ -261,7 +268,7 @@ static void parse_frame(canFrame_t *frame)
             RunSignal = 1;
             
             // 数据上报
-            frame->id = MSG_ID_TPDO_5 + ODObjs.node_id;    
+            frame->id = MSG_ID_TPDO_5 + m_node_id;    
             frame->len = 16; 
             if(ODObjs.error_code) 
             {
