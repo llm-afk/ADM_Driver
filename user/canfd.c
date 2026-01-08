@@ -65,7 +65,7 @@ static inline void canfd_config_baudRate(uint16_t lowSpeed, uint16_t highSpeed)
             CanfdRegs.F_CFG.bit.F_PRESC = 0; // canfd_clk = 100M / (PRESC + 1)
             CanfdRegs.F_SEG.bit.F_Seg_1 = 14; // canfd_bandrate = canfd_clk / (F_Seg_1 + 2 + F_Seg_2 + 1)
             CanfdRegs.F_SEG.bit.F_Seg_2 = 8;    
-            CanfdRegs.F_CFG.bit.F_SJW   = 6; // sjw < Seg_2     
+            CanfdRegs.F_CFG.bit.F_SJW   = 4; // sjw < Seg_2     
         }
         default :
         {
@@ -112,7 +112,7 @@ void canfd_init(void)
 
     // TDC
     CanfdRegs.DELAY_EALCAP.bit.TDCEN = 1;
-    CanfdRegs.DELAY_EALCAP.bit.SSPOFF = 13;
+    CanfdRegs.DELAY_EALCAP.bit.SSPOFF = 8;
 
     CanfdRegs.CFG_STAT.bit.RESET = 0;
     
