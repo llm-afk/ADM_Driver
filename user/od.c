@@ -17,7 +17,7 @@ static const OD_entry_t ODList[] =
     {0x2002, &ODObjs.control_word,              2, ATTR_RAM | ATTR_RW, MC_controlword_update},
     {0x2040, &ODObjs.node_id,                   1, ATTR_ROM | ATTR_RW, NULL},  
     {0x2070, &ODObjs.in_encoder_offset,         2, ATTR_ROM | ATTR_RW, NULL},
-    {0x2071, &ODObjs.ex_encoder_offset,         2, ATTR_ROM | ATTR_RW, NULL}, // 用于记录标零时刻的主编码器的值和副编码器的值写进来
+    {0x2071, &ODObjs.ex_encoder_offset,         2, ATTR_ROM | ATTR_RW, ResetDSP}, // 用于记录标零时刻的主编码器的值和副编码器的值写进来
     {0x2100, &ODObjs.firmware_version,          2, ATTR_RAM | ATTR_R,  NULL},
 };
 
@@ -28,7 +28,7 @@ static void dictionary_init(void)
     ODObjs.node_id = 1;
     ODObjs.in_encoder_offset = 0;
     ODObjs.ex_encoder_offset = 0;
-    ODObjs.firmware_version = 100; 
+    ODObjs.firmware_version = 7; 
 }
 
 /**

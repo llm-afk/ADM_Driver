@@ -42,7 +42,7 @@ void main(void)
     stimer_addTask(&stimer_main, 5, 1, 0, SystemLeve05msFunction);
     stimer_addTask(&stimer_main, 6, 4, 0, SystemLeve2msMotor);
     stimer_addTask(&stimer_main, 7, 4, 2, SystemLeve2msFunction);
-    
+
     EnableDog();
     SetInterruptEnable();      
     EINT; //使能全局中断

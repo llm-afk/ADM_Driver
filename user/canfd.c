@@ -30,7 +30,7 @@ static inline void canfd_config_filter_low7_dual(uint16_t id)
     CanfdRegs.ACF_EN.bit.AE_0 = 1;        // 使能过滤器0
     CanfdRegs.CIA_ACF_CFG.bit.ACFADR = 0; // 选择过滤器0
     CanfdRegs.CIA_ACF_CFG.bit.SELMASK = 0;// 寄存器ACF_x指向接收代码
-    CanfdRegs.ACF_0.all = (id & 0x007F); // 设置匹配值
+    CanfdRegs.ACF_0.all = (id & 0x007F);  // 设置匹配值
     CanfdRegs.CIA_ACF_CFG.bit.SELMASK = 1;// 寄存器ACF_x指向接收掩码。
     CanfdRegs.ACF_0.all = 0xFF80;         // 设置掩码
 }
@@ -50,7 +50,7 @@ static inline void canfd_config_baudRate(uint16_t lowSpeed, uint16_t highSpeed)
             CanfdRegs.S_CFG.bit.S_PRESC = 4; // canfd_clk = 100M / (PRESC + 1)
             CanfdRegs.S_SEG.bit.S_Seg_1 = 13; // canfd_bandrate = canfd_clk / (F_Seg_1 + 2 + F_Seg_2 + 1)
             CanfdRegs.S_SEG.bit.S_Seg_2 = 4;  
-            CanfdRegs.S_CFG.bit.S_SJW   = 2; // sjw < Seg_2
+            CanfdRegs.S_CFG.bit.S_SJW   = 4; // sjw < Seg_2
         }
         default :
         {
@@ -61,7 +61,7 @@ static inline void canfd_config_baudRate(uint16_t lowSpeed, uint16_t highSpeed)
     {
         case 4:
         {
-            // Data Phase：4M @ 80%
+            // Data Phase：4M @ 60%
             CanfdRegs.F_CFG.bit.F_PRESC = 0; // canfd_clk = 100M / (PRESC + 1)
             CanfdRegs.F_SEG.bit.F_Seg_1 = 14; // canfd_bandrate = canfd_clk / (F_Seg_1 + 2 + F_Seg_2 + 1)
             CanfdRegs.F_SEG.bit.F_Seg_2 = 8;    
@@ -234,14 +234,14 @@ static void parse_frame(canFrame_t *frame)
             }
             break;   
         }
-        case MSG_ID_RPDO_5:
+        case MSG_ID_RPDO_5: // 上位机数据交互
         {
             // 数据解析
             motor_ctrl.degree_ref_q14   = (int32_t)(*(float*)&frame->data[0] * 16384.0f); 
             motor_ctrl.velocity_ref_q14 = (int32_t)(*(float*)&frame->data[2] * 16384.0f); 
             motor_ctrl.current_ref_q14  = (int32_t)(*(float*)&frame->data[4] * 16384.0f); 
-            motor_ctrl.Kp_q14           = ((uint32_t)(*(uint16_t*)&frame->data[6])) * 164; // q14格式缩放100倍
-            motor_ctrl.Kd_q14           = ((uint32_t)(*(uint16_t*)&frame->data[7])) * 164; // q14格式缩放100倍
+            motor_ctrl.Kp_q14           = ((uint32_t)(*(uint16_t*)&frame->data[6])) * 164 * 30; // q14格式缩放100倍
+            motor_ctrl.Kd_q14           = ((uint32_t)(*(uint16_t*)&frame->data[7])) * 164 * 30; // q14格式缩放100倍
 
             // 数据上报
             frame->id = MSG_ID_TPDO_5 + m_node_id;    
@@ -263,10 +263,19 @@ static void parse_frame(canFrame_t *frame)
             enqueue_tx_frame(frame);
             break;   
         }
-        case MSG_ID_RPDO_6: // 新增命令码
+        case MSG_ID_RPDO_6: // 运控数据交互
         {
-            RunSignal = 1;
-            
+            if(RunSignal == 0)
+            {
+                RunSignal = 1;
+            }
+
+            motor_ctrl.degree_ref_q14   = (int32_t)(*(float*)&frame->data[0] * 16384.0f); 
+            motor_ctrl.velocity_ref_q14 = (int32_t)(*(float*)&frame->data[2] * 16384.0f); 
+            motor_ctrl.current_ref_q14  = (int32_t)(*(float*)&frame->data[4] * 16384.0f); 
+            motor_ctrl.Kp_q14           = ((uint32_t)(*(uint16_t*)&frame->data[6])) * 164 * 30; // q14格式缩放100倍
+            motor_ctrl.Kd_q14           = ((uint32_t)(*(uint16_t*)&frame->data[7])) * 164 * 30; // q14格式缩放100倍
+
             // 数据上报
             frame->id = MSG_ID_TPDO_5 + m_node_id;    
             frame->len = 16; 
@@ -285,6 +294,7 @@ static void parse_frame(canFrame_t *frame)
             frame->data[6] = (int16_t)(motor_temp * 10.0f); // 电机温度 (0.1°)
             frame->data[7] = (int16_t)(board_temp * 10.0f); // 驱动器温度 (0.1°) 
             enqueue_tx_frame(frame);
+            break;   
         }
         case MSG_ID_DFU:
         {
@@ -334,15 +344,20 @@ void can_com_loop(void)
 {
     canFrame_t canFrame_temp = {0};
 
-    if(ringbuffer_used(&canFrameRxRingbuffer) >= sizeof(canFrame_t))
+    // RX loop
+    for(uint16_t i = 0; i < 4; i++)
     {
+        if(ringbuffer_used(&canFrameRxRingbuffer) < sizeof(canFrame_t)) break;
         ringbuffer_out(&canFrameRxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
-        parse_frame(&canFrame_temp);            
+        parse_frame(&canFrame_temp);
     }
 
-    if(ringbuffer_used(&canFrameTxRingbuffer) >= sizeof(canFrame_t))
+    // TX loop
+    for(uint16_t i = 0; i < 4; i++)
     {
+        if(ringbuffer_used(&canFrameTxRingbuffer) < sizeof(canFrame_t)) break;
         ringbuffer_out(&canFrameTxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
-        sendCanFrame_fifo(&canFrame_temp);           
+        sendCanFrame_fifo(&canFrame_temp);
     }
 }
+

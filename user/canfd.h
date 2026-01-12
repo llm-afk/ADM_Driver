@@ -57,6 +57,7 @@ typedef struct {
     uint16_t data[32]; // 数据区：最多64字节，用32个 uint16_t 存储
 } canFrame_t;
 
+extern uint16_t m_node_id;
 void canfd_init(void);
 interrupt void canfd_IsrHander1(void);
 void can_com_loop(void);

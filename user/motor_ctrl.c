@@ -12,12 +12,18 @@ int MC_controlword_update(void)
     {
         case CW_CMD_OPERATION_ENABLE: // 使能电机
         {
-            RunSignal = 1;
+            if(RunSignal == 0)
+            {
+                RunSignal = 1;
+            }
             break;
         }
         case CW_CMD_OPERATION_DISABLE: // 失能电机
         {
-            RunSignal = 0;
+            if(RunSignal == 1)
+            {
+                RunSignal = 0;
+            }
             break;
         }
         case CW_CMD_RESET_HOME: // 复位原点
@@ -68,7 +74,7 @@ void MC_servo_loop(void)
             int64_t degree_err_q14 = motor_ctrl.degree_ref_q14 - encoder.degree_q14;
             int64_t velocity_err_q14 = motor_ctrl.velocity_ref_q14 - encoder.velocity_q14;
 
-            degree_err_q14   = CLAMP(degree_err_q14,  -102944,  102944); // 解决位置目标值和实际值过大导致计算中间过程溢出导致反向转动的问题
+            degree_err_q14   = CLAMP(degree_err_q14,  -163840,  163840); // 解决位置目标值和实际值过大导致计算中间过程溢出导致反向转动的问题
             velocity_err_q14 = CLAMP(velocity_err_q14,-1638400, 1638400);
 
             int32_t out_q14 = 0;
@@ -105,14 +111,14 @@ void MC_servo_loop(void)
             
             #define RAMP_STEPS 4000 
             
-            if (ramp_flag == 0)
+            if(ramp_flag == 0)
             {
                 ramp_flag = 1;
                 ramp_count = 0;
                 Iq_init = Iq;
                 Id_init = Id;
             }
-            if (ramp_count < RAMP_STEPS)
+            if(ramp_count < RAMP_STEPS)
             {
                 ramp_count++;
                 
@@ -133,10 +139,6 @@ void MC_servo_loop(void)
         }
         case STOPPED:
         {
-            if(RunSignal == 1) // 保留一个外部手动起的功能
-            {
-                motor_ctrl.state = INIT;
-            }
             break;
         }
         default :
