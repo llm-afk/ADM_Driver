@@ -25,7 +25,8 @@ extern unsigned int gSendToFunctionDataBuff1[];
 /************************************************************
 	常数定义
 ************************************************************/
-
+extern volatile uint16_t current_kp;
+extern volatile uint16_t current_ki;
 extern long Iq;
 extern long Id;
 extern int RunSignal;

@@ -13,7 +13,7 @@
 
 stimer_t stimer_main;
 
-#define DEBUG 0
+#define DEBUG 1
 #if(DEBUG == 1)
 int32_t debug_buffer[2000] = {0};
 #endif
@@ -70,6 +70,10 @@ interrupt void ZeroOfEPWMISR(void)
     // 电流环计算
     EPwm2Regs.ETCLR.bit.INT = 1;
     EINT;
+
+    // int err = INT_ABS(pm_ud);
+    // if(err)
+
     encoder_loop();
     ADCOverInterrupt();
     DINT;
@@ -85,7 +89,7 @@ interrupt void ZeroOfEPWMISR(void)
 
     #if(DEBUG == 1)
     static uint16_t cnt = 0;
-    debug_buffer[cnt] = gIMT.M;
+    debug_buffer[cnt] = pm_ud;
     cnt++;
     cnt%=2000;
     #endif

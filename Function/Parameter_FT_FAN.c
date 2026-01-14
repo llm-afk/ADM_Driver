@@ -51,6 +51,10 @@ MOTOR_RATED_CUR = 1000£¬TORQUE_CUR_LIMIT = 150 À´ÔÚÈí¼ş²ãÃæÏŞÖÆµçÁ÷»·µÄÊä³ö¡£Í¬Ê
 
 #include "Define.h"
 #include "Main.h"
+#include "stdint.h"
+
+volatile uint16_t current_kp = 0;
+volatile uint16_t current_ki = 0;
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // ¿ØÖÆ°å²ÎÊıÉèÖÃ
@@ -131,10 +135,10 @@ unsigned int HIGH_SPEED_KP_GAIN     =  10;
 ///////////////////////////////////////////////////////////////////////////////////////
 // µçÁ÷»·»·²ÎÊıÉèÖÃ
 ///////////////////////////////////////////////////////////////////////////////////////
-unsigned int D_CUR_KI               =  1000; // !
-unsigned int D_CUR_KP               =  1000;  // !
-unsigned int Q_CUR_KI               =  1000; // !
-unsigned int Q_CUR_KP               =  1000;  // !
+unsigned int D_CUR_KI               =  300; // !
+unsigned int D_CUR_KP               =  300;  // !
+unsigned int Q_CUR_KI               =  300; // !
+unsigned int Q_CUR_KP               =  300;  // !
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // ¿ØÖÆ²ÎÊıÉèÖÃ

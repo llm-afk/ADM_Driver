@@ -8,6 +8,8 @@
 
 #define CLAMP(x, min, max) (((x) > (max)) ? (max) : (((x) < (min)) ? (min) : (x)))
 
+#define INT_ABS(x) ((x) < 0 ? -(x) : (x))
+
 uint32_t square(uint64_t x);
 float logf(float x);
 
