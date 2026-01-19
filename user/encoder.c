@@ -140,6 +140,16 @@ void encoder_loop(void)
 }
 
 /**
+ * @brief od中触发标零后执行的函数
+ * @note 实际抓取上位机的包发现，标零逻辑只执行了一次写0x2070也就是主编码器的值，然后所以在这里完成副编码器的值的存储和复位
+ */
+int enc_set_zero(void)
+{
+    load_ram_item_to_eeprom_from_key(3); // 保存副编码器值
+    ResetDSP(); // 复位
+} 
+
+/**
  * @brief 2khz编码器校准程序
  * @return 0 校准中 1 校准完成
  */

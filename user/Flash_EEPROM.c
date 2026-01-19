@@ -4,7 +4,6 @@
 #include "od.h"
 #include "encoder.h"
 
-
 eeprom_t eeprom = {0};
 uint16_t eeprom_data_temp[ADDR_NUM] = {0}; // eeprom²ÁÐ´±¸·Ý»º³åÇø
 

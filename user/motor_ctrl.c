@@ -253,5 +253,4 @@ void info_collect_loop(void)
             clr_err(ERR_OVER_TEMP_DRV);
         }
     }
-
 }

@@ -13,7 +13,7 @@
 
 stimer_t stimer_main;
 
-#define DEBUG 1
+#define DEBUG 0
 #if(DEBUG == 1)
 int32_t debug_buffer[2000] = {0};
 #endif

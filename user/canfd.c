@@ -183,15 +183,17 @@ interrupt void canfd_IsrHander1(void)
                 canFrame_t canFrame_temp = {0};
                 canFrame_temp.id = CanfdRegs.RBUF.RID0.bit.ID0; 
                 canFrame_temp.len = CANFD_DLC_TO_LEN(CanfdRegs.RBUF.RIDST.bit.DLC);
-                memcpy(canFrame_temp.data, CanfdRegs.RBUF.DATA, ((canFrame_temp.len + 1) >> 1));
-                ringbuffer_in(&canFrameRxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
+                // if(GET_NODE_ID(canFrame_temp.id) == m_node_id) // canfd硬件id过滤器有概率失效所以统一成软件过滤
+                // {
+                    memcpy(canFrame_temp.data, CanfdRegs.RBUF.DATA, ((canFrame_temp.len + 1) >> 1));
+                    ringbuffer_in(&canFrameRxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
+                // }
             }
             CanfdRegs.TCTRL.bit.RREL = 1; // 释放一个槽位
         }
     }
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP4;
 }
-
 
 /**
  * @brief CAN 数据帧解析函数
@@ -242,8 +244,8 @@ static void parse_frame(canFrame_t *frame)
             motor_ctrl.degree_ref_q14   = (int32_t)(*(float*)&frame->data[0] * 16384.0f); 
             motor_ctrl.velocity_ref_q14 = (int32_t)(*(float*)&frame->data[2] * 16384.0f); 
             motor_ctrl.current_ref_q14  = (int32_t)(*(float*)&frame->data[4] * 16384.0f); 
-            motor_ctrl.Kp_q14           = ((uint32_t)(*(uint16_t*)&frame->data[6])) * 164 * 30; // q14格式缩放100倍
-            motor_ctrl.Kd_q14           = ((uint32_t)(*(uint16_t*)&frame->data[7])) * 164 * 30; // q14格式缩放100倍
+            motor_ctrl.Kp_q14           = ((uint32_t)(*(uint16_t*)&frame->data[6])) * 164 * 40; // q14格式缩放100倍
+            motor_ctrl.Kd_q14           = ((uint32_t)(*(uint16_t*)&frame->data[7])) * 164 * 40; // q14格式缩放100倍
 
             // 数据上报
             frame->id = MSG_ID_TPDO_5 + m_node_id;    
@@ -275,8 +277,8 @@ static void parse_frame(canFrame_t *frame)
             motor_ctrl.degree_ref_q14   = (int32_t)(*(float*)&frame->data[0] * 16384.0f); 
             motor_ctrl.velocity_ref_q14 = (int32_t)(*(float*)&frame->data[2] * 16384.0f); 
             motor_ctrl.current_ref_q14  = (int32_t)(*(float*)&frame->data[4] * 16384.0f); 
-            motor_ctrl.Kp_q14           = ((uint32_t)(*(uint16_t*)&frame->data[6])) * 164 * 30; // q14格式缩放100倍
-            motor_ctrl.Kd_q14           = ((uint32_t)(*(uint16_t*)&frame->data[7])) * 164 * 30; // q14格式缩放100倍
+            motor_ctrl.Kp_q14           = ((uint32_t)(*(uint16_t*)&frame->data[6])) * 164 * 40; // q14格式缩放100倍
+            motor_ctrl.Kd_q14           = ((uint32_t)(*(uint16_t*)&frame->data[7])) * 164 * 40; // q14格式缩放100倍
 
             // 数据上报
             frame->id = MSG_ID_TPDO_5 + m_node_id;    
@@ -347,17 +349,15 @@ void can_com_loop(void)
     canFrame_t canFrame_temp = {0};
 
     // RX loop
-    for(uint16_t i = 0; i < 4; i++)
+    if(ringbuffer_used(&canFrameRxRingbuffer) >= sizeof(canFrame_t))
     {
-        if(ringbuffer_used(&canFrameRxRingbuffer) < sizeof(canFrame_t)) break;
         ringbuffer_out(&canFrameRxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
         parse_frame(&canFrame_temp);
     }
 
     // TX loop
-    for(uint16_t i = 0; i < 4; i++)
+    if(ringbuffer_used(&canFrameTxRingbuffer) >= sizeof(canFrame_t))
     {
-        if(ringbuffer_used(&canFrameTxRingbuffer) < sizeof(canFrame_t)) break;
         ringbuffer_out(&canFrameTxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
         sendCanFrame_fifo(&canFrame_temp);
     }
