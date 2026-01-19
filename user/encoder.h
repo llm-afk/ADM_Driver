@@ -25,26 +25,26 @@ typedef struct{
 }encoder_config_t;
 
 typedef struct{
-    volatile uint16_t enc_degree_raw;      // 原始编码器值
-    volatile uint16_t enc_degree_lined;    // 线性化后的编码器值
-    volatile int32_t enc_turns;            // 编码器端累加圈数
-    volatile int32_t enc_velocity_q14;     // 编码器端速度 (rad/s)
+    uint16_t enc_degree_raw;      // 原始编码器值
+    uint16_t enc_degree_lined;    // 线性化后的编码器值
+    int32_t enc_turns;            // 编码器端累加圈数
+    int32_t enc_velocity_q14;     // 编码器端速度 (rad/s)
 
-    volatile uint16_t ex_enc_degree_raw;   // 副编码器原始值
-    volatile uint16_t ex_enc_degree_lined; // 副编码器线性校准值
+    uint16_t ex_enc_degree_raw;   // 副编码器原始值
+    uint16_t ex_enc_degree_lined; // 副编码器线性校准值
     
-    volatile int64_t degree_q14;           // 减速端角度 (rad)
-    volatile int32_t velocity_q14;         // 减速端速度 (rad/s)
+    int64_t degree_q14;           // 减速端角度 (rad)
+    int32_t velocity_q14;         // 减速端速度 (rad/s)
 
-    volatile uint16_t elec_degree;         // 电角度
+    uint16_t elec_degree;         // 电角度
 
-    volatile uint16_t in_enc_deg_zero_conf;// 暂存eeprom中存储的标零时刻主编码器的值
-    volatile uint16_t ex_enc_deg_zero_conf;// 暂存eeprom中存储的标零时刻副编码器的值
-    volatile int16_t  enc_error_conf;      // 暂存eeprom中存储的标零时刻两个编码器的差值
-    volatile uint16_t in_enc_deg_zero;     // 上电瞬间主编码器的值
-    volatile uint16_t ex_enc_deg_zero;     // 上电瞬间副编码器的值
-    volatile int16_t  enc_error;           // 上电瞬间两个编码器的差值
-    volatile int16_t  error;               // 标零时刻双编差值和上电瞬间双差值这两个差值的差值，可以用来描述上电后主编码器的磁铁到底往那个方向旋转了多少圈
+    uint16_t in_enc_deg_zero_conf;// 暂存eeprom中存储的标零时刻主编码器的值
+    uint16_t ex_enc_deg_zero_conf;// 暂存eeprom中存储的标零时刻副编码器的值
+    int16_t  enc_error_conf;      // 暂存eeprom中存储的标零时刻两个编码器的差值
+    uint16_t in_enc_deg_zero;     // 上电瞬间主编码器的值
+    uint16_t ex_enc_deg_zero;     // 上电瞬间副编码器的值
+    int16_t  enc_error;           // 上电瞬间两个编码器的差值
+     int16_t  error;               // 标零时刻双编差值和上电瞬间双差值这两个差值的差值，可以用来描述上电后主编码器的磁铁到底往那个方向旋转了多少圈
 }encoder_t;
 
 extern encoder_config_t encoder_config;

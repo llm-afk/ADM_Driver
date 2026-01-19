@@ -27,12 +27,17 @@ void canfd_ringbuffer_init(void)
  */
 static inline void canfd_config_filter_low7_dual(uint16_t id)
 {
-    CanfdRegs.ACF_EN.bit.AE_0 = 1;        // 使能过滤器0
-    CanfdRegs.CIA_ACF_CFG.bit.ACFADR = 0; // 选择过滤器0
-    CanfdRegs.CIA_ACF_CFG.bit.SELMASK = 0;// 寄存器ACF_x指向接收代码
-    CanfdRegs.ACF_0.all = (id & 0x007F);  // 设置匹配值
-    CanfdRegs.CIA_ACF_CFG.bit.SELMASK = 1;// 寄存器ACF_x指向接收掩码。
-    CanfdRegs.ACF_0.all = 0xFF80;         // 设置掩码
+    CanfdRegs.ACF_EN.all = 0x01; // 使能滤波器
+
+    CanfdRegs.CIA_ACF_CFG.bit.SELMASK = 0;
+    CanfdRegs.CIA_ACF_CFG.bit.ACFADR = 0;
+    CanfdRegs.ACF_0.all = (id & 0x007F);
+    CanfdRegs.ACF_1.all = 0;
+
+    CanfdRegs.CIA_ACF_CFG.bit.SELMASK = 1;
+    CanfdRegs.CIA_ACF_CFG.bit.ACFADR = 0;
+    CanfdRegs.ACF_0.all = 0xFF80;
+    CanfdRegs.ACF_1.all = 0;
 }
 
 /**
@@ -108,7 +113,7 @@ void canfd_init(void)
     canfd_config_baudRate(1, 4);
 
     // filter
-    //canfd_config_filter_low7_dual(m_node_id);
+    canfd_config_filter_low7_dual(m_node_id);
 
     // TDC
     CanfdRegs.DELAY_EALCAP.bit.TDCEN = 1;
@@ -178,11 +183,8 @@ interrupt void canfd_IsrHander1(void)
                 canFrame_t canFrame_temp = {0};
                 canFrame_temp.id = CanfdRegs.RBUF.RID0.bit.ID0; 
                 canFrame_temp.len = CANFD_DLC_TO_LEN(CanfdRegs.RBUF.RIDST.bit.DLC);
-                if(GET_NODE_ID(canFrame_temp.id) == m_node_id) // canfd硬件id过滤器有概率失效所以统一成软件过滤
-                {
-                    memcpy(canFrame_temp.data, CanfdRegs.RBUF.DATA, ((canFrame_temp.len + 1) >> 1));
-                    ringbuffer_in(&canFrameRxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
-                }
+                memcpy(canFrame_temp.data, CanfdRegs.RBUF.DATA, ((canFrame_temp.len + 1) >> 1));
+                ringbuffer_in(&canFrameRxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
             }
             CanfdRegs.TCTRL.bit.RREL = 1; // 释放一个槽位
         }
