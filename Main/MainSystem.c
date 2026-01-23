@@ -10,6 +10,7 @@
 #include "iap.h"
 #include "encoder.h"
 #include "motor_ctrl.h"
+#include "led.h"
 
 stimer_t stimer_main;
 
@@ -20,11 +21,13 @@ int32_t debug_buffer[2000] = {0};
 
 void main(void)
 {
-    InitSysCtrl();                   
+    InitSysCtrl();
     InitInterrupt();                 
     InitPeripherals();             
     InitForMotorApp();        
     InitForFunctionApp();
+    
+    led_init();
     OD_init(); // 先初始化OD对象,初始化参数默认值
 
     eeprom_init();
@@ -42,6 +45,7 @@ void main(void)
     stimer_addTask(&stimer_main, 5, 1, 0, SystemLeve05msFunction);
     stimer_addTask(&stimer_main, 6, 4, 0, SystemLeve2msMotor);
     stimer_addTask(&stimer_main, 7, 4, 2, SystemLeve2msFunction);
+    stimer_addTask(&stimer_main, 8, 1,2, lpg_loop);
 
     EnableDog();
     SetInterruptEnable();      
@@ -53,6 +57,8 @@ void main(void)
         can_com_loop();
     }
 }
+
+uint32_t text = 0;
 
 /***************************************************************
     取代EPWM的ADC 中断，使用下溢中断
@@ -70,10 +76,6 @@ interrupt void ZeroOfEPWMISR(void)
     // 电流环计算
     EPwm2Regs.ETCLR.bit.INT = 1;
     EINT;
-
-    // int err = INT_ABS(pm_ud);
-    // if(err)
-
     encoder_loop();
     ADCOverInterrupt();
     DINT;

@@ -36,8 +36,8 @@ void encoder_init(void)
     }
 
     // 更新主编码器和副编码器角度
-    uint16_t enc_temp = get_main_degree_raw();
-    uint16_t ex_enc_temp = get_ex_degree_raw();
+    uint16_t enc_temp = get_pri_enc_val();
+    uint16_t ex_enc_temp = get_sec_enc_val();
 
     // 修正编码器旋转方向
     if(encoder_config.encoder_reverse)
@@ -81,13 +81,13 @@ void encoder_loop(void)
     // 更新主编码器和副编码器角度并修正方向
     if(encoder_config.encoder_reverse)
     {
-        encoder.enc_degree_raw = ENCODER_CPR - 1 - get_main_degree_raw();
-        encoder.ex_enc_degree_raw = ENCODER_CPR - 1 - get_ex_degree_raw();
+        encoder.enc_degree_raw = ENCODER_CPR - 1 - get_pri_enc_val();
+        encoder.ex_enc_degree_raw = ENCODER_CPR - 1 - get_sec_enc_val();
     }
     else
     {
-        encoder.enc_degree_raw = get_main_degree_raw();
-        encoder.ex_enc_degree_raw = get_ex_degree_raw();
+        encoder.enc_degree_raw = get_pri_enc_val();
+        encoder.ex_enc_degree_raw = get_sec_enc_val();
     }
 
     // 时刻更新主编码器值和副编码器值为了应对编码器标零时需要读取当前的角度值

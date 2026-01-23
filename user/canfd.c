@@ -88,7 +88,7 @@ void canfd_init(void)
 
     // gpio
     EALLOW;
-    #if 1
+    #if 0
     GpioCtrlRegs.GPAPUD.bit.GPIO28 = 1;      // CANFD_Rx
     GpioCtrlRegs.GPAPUD.bit.GPIO29 = 1;     // CANFD_Tx
     AnalogRegs.PIN_MUX_FLASH.bit.canfd_gpio_mux = 0xA;   //GPIO0 CANFDRXD ; GPIO32 CANFDTXD
@@ -97,11 +97,6 @@ void canfd_init(void)
     GpioCtrlRegs.GPBPUD.bit.GPIO32 = 1;     // CANFD_Tx
     AnalogRegs.PIN_MUX_FLASH.bit.canfd_gpio_mux = 0x5;   //GPIO0 CANFDRXD ; GPIO32 CANFDTXD
     #endif
-
-    GpioCtrlRegs.GPBPUD.bit.GPIO34 = 0;  
-    GpioCtrlRegs.GPBMUX1.bit.GPIO34 = 0;
-    GpioCtrlRegs.GPBDIR.bit.GPIO34 = 1;
-    GpioDataRegs.GPBCLEAR.bit.GPIO34 = 1;
     EDIS;
 
     CanfdRegs.CFG_STAT.bit.RESET = 1; 
