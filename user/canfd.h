@@ -57,6 +57,11 @@ typedef struct {
     uint16_t data[32]; // 数据区：最多64字节，用32个 uint16_t 存储
 } canFrame_t;
 
+extern uint16_t canfd_frame_flag; // 用于指示当前是否有收到canfd帧数据 0-有 1-没有
+extern uint16_t canfd_timeout_cnt; // 100hz记录没有canfd帧数据的时候累加值
+extern uint16_t canfd_first_flag;
+extern uint16_t canfd_buf_off_flag;
+
 extern uint16_t m_node_id;
 void canfd_init(void);
 interrupt void canfd_IsrHander1(void);

@@ -16,36 +16,38 @@ stimer_t stimer_main;
 
 #define DEBUG 0
 #if(DEBUG == 1)
-int32_t debug_buffer[2000] = {0};
+int16_t debug_buffer_1[2000] = {0};
+int16_t debug_buffer_2[2000] = {0};
 #endif
 
 void main(void)
 {
+    for(volatile uint32_t i = 0; i < 100000; i++) asm(" NOP");
+
     InitSysCtrl();
     InitInterrupt();                 
     InitPeripherals();             
     InitForMotorApp();        
     InitForFunctionApp();
     
-    led_init();
     OD_init(); // 先初始化OD对象,初始化参数默认值
-
+    
     eeprom_init();
     load_eeprom_to_ram(); // 初始化参数
 
+    led_init();
     encoder_init(); // 根据eeprom参数配置encoder
     canfd_init(); // 根据eeprom参数初始化canfd
 
     stimer_init(&stimer_main);
     stimer_addTask(&stimer_main, 0, 1, 0, KickDog);
-    stimer_addTask(&stimer_main, 1, 1, 0, MC_servo_loop);
-    //stimer_addTask(&stimer_main, 2, 1, 0, can_com_loop);
+    stimer_addTask(&stimer_main, 1, 20,0, led_loop);
+    stimer_addTask(&stimer_main, 2, 1, 0, MC_servo_loop);
     stimer_addTask(&stimer_main, 3, 20,1, info_collect_loop);
     stimer_addTask(&stimer_main, 4, 1, 0, SystemLeve05msMotor);
     stimer_addTask(&stimer_main, 5, 1, 0, SystemLeve05msFunction);
     stimer_addTask(&stimer_main, 6, 4, 0, SystemLeve2msMotor);
     stimer_addTask(&stimer_main, 7, 4, 2, SystemLeve2msFunction);
-    stimer_addTask(&stimer_main, 8, 1,2, lpg_loop);
 
     EnableDog();
     SetInterruptEnable();      
@@ -57,8 +59,6 @@ void main(void)
         can_com_loop();
     }
 }
-
-uint32_t text = 0;
 
 /***************************************************************
     取代EPWM的ADC 中断，使用下溢中断
@@ -91,7 +91,8 @@ interrupt void ZeroOfEPWMISR(void)
 
     #if(DEBUG == 1)
     static uint16_t cnt = 0;
-    debug_buffer[cnt] = pm_ud;
+    debug_buffer_1[cnt] = CanfdRegs.ECNT.bit.RECNT;
+    debug_buffer_2[cnt] = CanfdRegs.ECNT.bit.TECNT;
     cnt++;
     cnt%=2000;
     #endif

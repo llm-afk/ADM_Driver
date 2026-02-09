@@ -10,6 +10,8 @@
 
 #define INT_ABS(x) ((x) < 0 ? -(x) : (x))
 
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+
 uint32_t square(uint64_t x);
 float logf(float x);
 

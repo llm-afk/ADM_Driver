@@ -70,7 +70,7 @@ static inline void canfd_config_baudRate(uint16_t lowSpeed, uint16_t highSpeed)
             CanfdRegs.F_CFG.bit.F_PRESC = 0; // canfd_clk = 100M / (PRESC + 1)
             CanfdRegs.F_SEG.bit.F_Seg_1 = 14; // canfd_bandrate = canfd_clk / (F_Seg_1 + 2 + F_Seg_2 + 1)
             CanfdRegs.F_SEG.bit.F_Seg_2 = 8;    
-            CanfdRegs.F_CFG.bit.F_SJW   = 4; // sjw < Seg_2     
+            CanfdRegs.F_CFG.bit.F_SJW   = 6; // sjw < Seg_2     
         }
         default :
         {
@@ -178,13 +178,13 @@ interrupt void canfd_IsrHander1(void)
                 canFrame_t canFrame_temp = {0};
                 canFrame_temp.id = CanfdRegs.RBUF.RID0.bit.ID0; 
                 canFrame_temp.len = CANFD_DLC_TO_LEN(CanfdRegs.RBUF.RIDST.bit.DLC);
-                // if(GET_NODE_ID(canFrame_temp.id) == m_node_id) // canfd硬件id过滤器有概率失效所以统一成软件过滤
-                // {
-                    memcpy(canFrame_temp.data, CanfdRegs.RBUF.DATA, ((canFrame_temp.len + 1) >> 1));
-                    ringbuffer_in(&canFrameRxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
-                // }
+                memcpy(canFrame_temp.data, CanfdRegs.RBUF.DATA, ((canFrame_temp.len + 1) >> 1));
+                ringbuffer_in(&canFrameRxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
+
+                canfd_frame_flag = 0;
+                canfd_timeout_cnt = 0;
             }
-            CanfdRegs.TCTRL.bit.RREL = 1; // 释放一个槽位
+            CanfdRegs.TCTRL.bit.RREL = 1;
         }
     }
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP4;
@@ -239,8 +239,8 @@ static void parse_frame(canFrame_t *frame)
             motor_ctrl.degree_ref_q14   = (int32_t)(*(float*)&frame->data[0] * 16384.0f); 
             motor_ctrl.velocity_ref_q14 = (int32_t)(*(float*)&frame->data[2] * 16384.0f); 
             motor_ctrl.current_ref_q14  = (int32_t)(*(float*)&frame->data[4] * 16384.0f); 
-            motor_ctrl.Kp_q14           = ((uint32_t)(*(uint16_t*)&frame->data[6])) * 164 * 40; // q14格式缩放100倍
-            motor_ctrl.Kd_q14           = ((uint32_t)(*(uint16_t*)&frame->data[7])) * 164 * 40; // q14格式缩放100倍
+            motor_ctrl.Kp_q14           = ((uint32_t)(*(uint16_t*)&frame->data[6])) * 164 * 50; // q14格式缩放100倍
+            motor_ctrl.Kd_q14           = ((uint32_t)(*(uint16_t*)&frame->data[7])) * 164 * 50; // q14格式缩放100倍
 
             // 数据上报
             frame->id = MSG_ID_TPDO_5 + m_node_id;    
@@ -250,13 +250,9 @@ static void parse_frame(canFrame_t *frame)
                 frame->len = 20;     
                 *(uint16_t*)&frame->data[8] = ODObjs.error_code;
             }
-            // *(float*)&frame->data[0] = (float)encoder.degree_q14 / 16384.0f; // 减速端位置反馈(rad)
-            // *(float*)&frame->data[2] = (float)encoder.velocity_q14 / 16384.0f; // 减速端速度反馈(rad/s)
-            // *(float*)&frame->data[4] = (float)gIMT.T * MOTOR_RATED_CUR / 40960.0f; // 力矩(N/m)
             *(float*)&frame->data[0] = (float)encoder.degree_q14 / 16384.0f; // 减速端位置反馈(rad)
             *(float*)&frame->data[2] = (float)encoder.velocity_q14 / 16384.0f; // 减速端速度反馈(rad/s)
-            //*(float*)&frame->data[4] = (float)(square(((uint64_t)(((int32_t)gIMT.M * gIMT.M) + ((int32_t)gIMT.T * gIMT.T))) << 16) >> 8) * (((gIMT.M + gIMT.T) >= 0) ? +1 : -1) * MOTOR_RATED_CUR / 40960.0f; // 电流(A)
-            *(float*)&frame->data[4] = imt_current_to_float(gIMT.M, gIMT.T, MOTOR_RATED_CUR); // 性能优化版本，直接减少50us计算时间
+            *(float*)&frame->data[4] = imt_current_to_float(gIMT.M, gIMT.T, MOTOR_RATED_CUR); // 性能优化版本，减少50us计算时间
             frame->data[6] = (int16_t)(motor_temp * 10.0f); // 电机温度 (0.1°)
             frame->data[7] = (int16_t)(board_temp * 10.0f); // 驱动器温度 (0.1°) 
             enqueue_tx_frame(frame);
@@ -269,11 +265,12 @@ static void parse_frame(canFrame_t *frame)
                 RunSignal = 1;
             }
 
+            // 数据解析
             motor_ctrl.degree_ref_q14   = (int32_t)(*(float*)&frame->data[0] * 16384.0f); 
             motor_ctrl.velocity_ref_q14 = (int32_t)(*(float*)&frame->data[2] * 16384.0f); 
             motor_ctrl.current_ref_q14  = (int32_t)(*(float*)&frame->data[4] * 16384.0f); 
-            motor_ctrl.Kp_q14           = ((uint32_t)(*(uint16_t*)&frame->data[6])) * 164 * 40; // q14格式缩放100倍
-            motor_ctrl.Kd_q14           = ((uint32_t)(*(uint16_t*)&frame->data[7])) * 164 * 40; // q14格式缩放100倍
+            motor_ctrl.Kp_q14           = ((uint32_t)(*(uint16_t*)&frame->data[6])) * 164 * 50; // q14格式缩放100倍
+            motor_ctrl.Kd_q14           = ((uint32_t)(*(uint16_t*)&frame->data[7])) * 164 * 50; // q14格式缩放100倍
 
             // 数据上报
             frame->id = MSG_ID_TPDO_5 + m_node_id;    
@@ -283,13 +280,9 @@ static void parse_frame(canFrame_t *frame)
                 frame->len = 20;     
                 *(uint16_t*)&frame->data[8] = ODObjs.error_code;
             }
-            // *(float*)&frame->data[0] = (float)encoder.degree_q14 / 16384.0f; // 减速端位置反馈(rad)
-            // *(float*)&frame->data[2] = (float)encoder.velocity_q14 / 16384.0f; // 减速端速度反馈(rad/s)
-            // *(float*)&frame->data[4] = (float)gIMT.T * MOTOR_RATED_CUR / 40960.0f; // 力矩(N/m)
             *(float*)&frame->data[0] = (float)encoder.degree_q14 / 16384.0f; // 减速端位置反馈(rad)
             *(float*)&frame->data[2] = (float)encoder.velocity_q14 / 16384.0f; // 减速端速度反馈(rad/s)
-            //*(float*)&frame->data[4] = (float)(square(((uint64_t)(((int32_t)gIMT.M * gIMT.M) + ((int32_t)gIMT.T * gIMT.T))) << 16) >> 8) * (((gIMT.M + gIMT.T) >= 0) ? +1 : -1) * MOTOR_RATED_CUR / 40960.0f; // 电流(A)
-            *(float*)&frame->data[4] = imt_current_to_float(gIMT.M, gIMT.T, MOTOR_RATED_CUR); // 性能优化版本，直接减少50us计算时间
+            *(float*)&frame->data[4] = imt_current_to_float(gIMT.M, gIMT.T, MOTOR_RATED_CUR); // 性能优化版本，减少50us计算时间
             frame->data[6] = (int16_t)(motor_temp * 10.0f); // 电机温度 (0.1°)
             frame->data[7] = (int16_t)(board_temp * 10.0f); // 驱动器温度 (0.1°) 
             enqueue_tx_frame(frame);
@@ -334,6 +327,12 @@ static void parse_frame(canFrame_t *frame)
     }
 }
 
+uint16_t canfd_frame_flag = 0; // 用于指示当前是否有收到canfd帧数据 0-有 1-没有
+uint16_t canfd_timeout_cnt = 0; // 100hz记录没有canfd帧数据的时候累加值
+uint16_t canfd_first_flag = 0; // 跳过开始的若干时间的标志位
+
+uint16_t canfd_buf_off_flag = 0; // can_bus_off标志位 0-正常 1-关闭
+
 /**
  * @brief can协议通信loop
  * @note 在stimer框架下面2khz执行
@@ -356,5 +355,19 @@ void can_com_loop(void)
         ringbuffer_out(&canFrameTxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
         sendCanFrame_fifo(&canFrame_temp);
     }
-}
 
+    // 如果该节点处于can_bus_off状态超过一定时间，则尝试复位芯片来恢复通信
+    // static uint16_t busoff_cnt = 0; // 记录总线关闭的持续时间
+    // if(CanfdRegs.CFG_STAT.bit.BUSOFF) // 如果检测到canfd总线关闭
+    // {
+    //     busoff_cnt++;
+    //     if(busoff_cnt > 2000) 
+    //     {
+    //         ResetDSP(); // 复位
+    //     }
+    // }
+    // else
+    // {
+    //     busoff_cnt = 0;
+    // }
+}

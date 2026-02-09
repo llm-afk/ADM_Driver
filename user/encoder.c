@@ -10,7 +10,7 @@ encoder_config_t encoder_config = {
 encoder_t encoder = {0};
 
 /**
- * @brief 执行一些编码器上电后固定实行的一些操作
+ * @brief 编码器初始化
  */
 void encoder_init(void)
 {
@@ -27,23 +27,15 @@ void encoder_init(void)
         encoder.enc_error_conf += ENCODER_CPR; 
     }
 
-    // **关键修复：等待编码器芯片上电稳定**
-    // 编码器芯片通常需要10-50ms的上电复位时间
-    // 延时约50ms (假设100MHz CPU时钟，大约5,000,000个NOP周期)
-    volatile uint32_t i;
-    for(i = 0; i < 5000000; i++) {
-        asm(" NOP");
-    }
-
     // 更新主编码器和副编码器角度
-    uint16_t enc_temp = get_pri_enc_val();
+    uint16_t enc_temp = get_pri_enc_val(); // 需要确保编码器已经上电启动 55us
     uint16_t ex_enc_temp = get_sec_enc_val();
 
     // 修正编码器旋转方向
     if(encoder_config.encoder_reverse)
     {
-        enc_temp = ENCODER_CPR - 1 - enc_temp;
-        ex_enc_temp = ENCODER_CPR - 1 - ex_enc_temp;
+        enc_temp = 16383 - enc_temp;
+        ex_enc_temp = 16383 - ex_enc_temp;
     }
 
     // 记录上电时刻两个编码器的值
@@ -81,8 +73,8 @@ void encoder_loop(void)
     // 更新主编码器和副编码器角度并修正方向
     if(encoder_config.encoder_reverse)
     {
-        encoder.enc_degree_raw = ENCODER_CPR - 1 - get_pri_enc_val();
-        encoder.ex_enc_degree_raw = ENCODER_CPR - 1 - get_sec_enc_val();
+        encoder.enc_degree_raw = 16383 - get_pri_enc_val();
+        encoder.ex_enc_degree_raw = 16383 - get_sec_enc_val();
     }
     else
     {
@@ -99,11 +91,11 @@ void encoder_loop(void)
 
     // 维护多圈累计值
     static uint16_t degree_last = 0;
-    static uint16_t flag = 0; // 解决上电第一次delta偏大的问题
+    static uint16_t flag = 0; 
     if(flag == 0)
     {
         flag = 1;
-        degree_last = encoder.enc_degree_lined;
+        degree_last = encoder.enc_degree_lined; // 解决上电第一次delta偏大的问题
     }
     int16_t delta = (int16_t)(encoder.enc_degree_lined - degree_last);
     
@@ -128,13 +120,11 @@ void encoder_loop(void)
     // 更新电角度
     if(motor_ctrl.state == MIT)
     {
-        int16_t elec_raw = (int16_t)((encoder.enc_degree_lined & 0x7FF) - encoder_config.elec_degree_calib);
-        if(elec_raw < 0)elec_raw += 2048;
-        encoder.elec_degree = ((uint16_t)elec_raw << 5);
+        encoder.elec_degree = (uint16_t)((encoder.enc_degree_lined - encoder_config.elec_degree_calib) & 0x7FF) << 5;
 
-        if(encoder_config.encoder_reverse == 0)
+        if(!encoder_config.encoder_reverse)
         {
-            encoder.elec_degree = 65535 - encoder.elec_degree;
+            encoder.elec_degree = 65535 - encoder.elec_degree;   
         }
     }
 }
@@ -176,10 +166,10 @@ uint16_t encoder_calibrate(void)
         }
         case 1: // cw find direction
         {
-            encoder.elec_degree += 256; // 旋转2个电周期
-            if(cnt >= 512)
+            encoder.elec_degree += 256;
+            if(cnt >= 512) // 沿着电角度的正方向旋转两个电周期，我们规定这个方向为电机的正方向
             {
-                int32_t degree_dif = (int32_t)((int32_t)encoder.enc_degree_raw - enc_degree_raw);
+                int16_t degree_dif = (int16_t)(encoder.enc_degree_raw - enc_degree_raw);
                 if(degree_dif > ENCODER_CPR_DIV) 
                 {
                     degree_dif -= ENCODER_CPR;
@@ -191,14 +181,7 @@ uint16_t encoder_calibrate(void)
 
                 if(degree_dif < 0)
                 {
-                    if(encoder_config.encoder_reverse) 
-                    {
-                        encoder_config.encoder_reverse = 0;
-                    } 
-                    else
-                    {
-                        encoder_config.encoder_reverse = 1;
-                    }
+                    encoder_config.encoder_reverse ^= 1;
                 }
                 cnt = 0;
                 state = 2;

@@ -132,8 +132,8 @@ extern "C" {
 #define	ADC_UDC				(AdcResult.ADCRESULT2<<4)
 #else
 #define ADC_IU               (AdcResult.ADCRESULT0<<4)
-#define ADC_IV               (AdcResult.ADCRESULT1<<4)          // 这个地方是由于硬件驱动板到DSP版时接口反掉了
-#define ADC_IW               (AdcResult.ADCRESULT0<<4)
+#define ADC_IW               (AdcResult.ADCRESULT1<<4)          // 这个地方是由于硬件驱动板到DSP版时接口反掉了
+#define ADC_IV               (AdcResult.ADCRESULT0<<4)
 #define ADC_UDC              (AdcResult.ADCRESULT2<<4)
 #endif
 #define ADC_IBUS            (AdcResult.ADCRESULT3)

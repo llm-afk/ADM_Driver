@@ -57,10 +57,23 @@ int MC_controlword_update(void)
 #pragma CODE_SECTION(MC_servo_loop, "ramfuncs");
 void MC_servo_loop(void)
 {
-    // 更新减速端位置和速度
-    // encoder.degree_q14 = (encoder.enc_turns / GEAR_RATIO * 2pi * 2^14) + ((encoder.enc_degree_lined - 上电时刻主编码器的角度值) / ENCODER_CPR / GEAR_RATIO * 2pi * 2^14) + (encoder.error * 0.75f * 2pi * 16384 / 8192) ;
-    encoder.degree_q14 = (encoder.enc_turns * 8580) + (((int32_t)((int32_t)encoder.enc_degree_lined - (int32_t)encoder.in_enc_deg_zero) * 8580) >> 14) + (int32_t)((float)encoder.error * 9.245f);
+    encoder.degree_q14 = ((float)encoder.enc_turns + ((float)((int16_t)encoder.enc_degree_lined - (int16_t)encoder.in_enc_deg_zero) / 16384) + ((float)encoder.error * 18 / 16384)) / 12 * TWO_PI * 16384;
     encoder.velocity_q14 = (int32_t)(encoder.enc_velocity_q14 * GEAR_RATIO_INV);
+
+    static int64_t degree_q14_last = 0;
+    static int16_t first_flag = 0;
+    if(!first_flag) 
+    {
+        first_flag++;
+    }
+    else
+    {
+        if(INT_ABS(encoder.degree_q14 - degree_q14_last) > 1000) // 滤除50rps以上的瞬时错误角度数据
+        {
+            encoder.degree_q14 = degree_q14_last;
+        }
+    }
+    degree_q14_last = encoder.degree_q14;
     
     switch(motor_ctrl.state)
     {
@@ -77,13 +90,11 @@ void MC_servo_loop(void)
             degree_err_q14   = CLAMP(degree_err_q14,  -163840,  163840); // 解决位置目标值和实际值过大导致计算中间过程溢出导致反向转动的问题
             velocity_err_q14 = CLAMP(velocity_err_q14,-1638400, 1638400);
 
-            int32_t out_q14 = 0;
+            int32_t out_q14 = (int32_t)(((int64_t)motor_ctrl.Kp_q14 * degree_err_q14) >> 14) \
+                            + (int32_t)(((int64_t)motor_ctrl.Kd_q14 * velocity_err_q14) >> 14) \
+                            + (int32_t)((int64_t)motor_ctrl.current_ref_q14 * 40960 / MOTOR_RATED_CUR);
 
-            out_q14 = (int32_t)(((int64_t)motor_ctrl.Kp_q14 * degree_err_q14) >> 14) \
-                    + (int32_t)(((int64_t)motor_ctrl.Kd_q14 * velocity_err_q14) >> 14) \
-                    + (int32_t)((int64_t)motor_ctrl.current_ref_q14 * 40960 / MOTOR_RATED_CUR);
-
-            out_q14 = CLAMP(out_q14, -67108864, 67108864); // 4096 * 16384
+            out_q14 = CLAMP(out_q14, -85196800, 85196800); // 5200 * 16384
             
             Iq = out_q14 >> 14; 
             Id = 0;
@@ -180,7 +191,7 @@ float board_temp;
 float motor_temp;
 
 #define ADC_MAX 4095.0f
-#define R_PULLUP 4700.0f   // 4.7k
+#define R_PULLUP 10000.0f // 10k
 #define R25   10000.0f
 #define BETA  3445.0f
 
@@ -190,67 +201,97 @@ float motor_temp;
  */
 void info_collect_loop(void)
 {
-    // static uint16_t cnt = 0;
-    // if(cnt%2 == 0)
-    // {
-    //     Iq = 0;
-    //     Id = 1000;
-    // }
-    // else
-    // {
-    //     Iq = 0;
-    //     Id = 0;
-    // }
-    // cnt++;
-
     static float r_ntc;
-    static float board_temp_filt = 0.0f;
-    static float motor_temp_filt = 0.0f;
-    const float alpha = 0.01f; // 滤波系数，越小越平滑，0~1
+    static float board_temp_filt;
+    static float motor_temp_filt;
+    static uint16_t temp_filt_inited = 0;
 
-    // 采集驱动板温度
-    r_ntc = 4700.0f * ADC_NTC_M / (4095.0f - ADC_NTC_M);
+    const float alpha = 0.01f;
+
+    /* -------- 驱动板温度 -------- */
+    r_ntc = R_PULLUP * ADC_NTC / (4095.0f - ADC_NTC);
     float board_temp_raw = 1.0f / (1.0f / 298.15f + logf(r_ntc / 10000.0f) / 3445.0f) - 273.15f;
-    // 一阶低通滤波
-    board_temp_filt = board_temp_filt + alpha * (board_temp_raw - board_temp_filt);
-    board_temp = board_temp_filt;
 
-    // 采集电机温度
-    r_ntc = 4700.0f * ADC_NTC / (4095.0f - ADC_NTC);
+    /* -------- 电机温度 -------- */
+    r_ntc = R_PULLUP * ADC_NTC_M / (4095.0f - ADC_NTC_M);
     float motor_temp_raw = 1.0f / (1.0f / 298.15f + logf(r_ntc / 10000.0f) / 3445.0f) - 273.15f;
-    // 一阶低通滤波
-    motor_temp_filt = motor_temp_filt + alpha * (motor_temp_raw - motor_temp_filt);
+
+    /* -------- 一阶滤波（带初始化） -------- */
+    if (!temp_filt_inited)
+    {
+        board_temp_filt = board_temp_raw;
+        motor_temp_filt = motor_temp_raw;
+        temp_filt_inited = 1;
+    }
+    else
+    {
+        board_temp_filt += alpha * (board_temp_raw - board_temp_filt);
+        motor_temp_filt += alpha * (motor_temp_raw - motor_temp_filt);
+    }
+
+    board_temp = board_temp_filt;
     motor_temp = motor_temp_filt;
 
-    // 考虑到实际的在狗上的场景就是他会先触发温度保护然后断掉电机，所以这里只做一个简单的超温错误上报和软关闭的流程的兜底流程，不涉及温度降低自动开启的功能
-    if (!(ODObjs.error_code & ERR_OVER_TEMP_MOTOR))
+    /* -------- 保护逻辑 -------- */
+    if(!(ODObjs.error_code & ERR_OVER_TEMP_MOTOR))
     {
-        if (motor_temp > MOTOR_TEMP_MAX)
+        if(motor_temp > MOTOR_TEMP_MAX)
         {
             set_err(ERR_OVER_TEMP_MOTOR);
             motor_ctrl.state = SOFT_STOP;
         }
     }
-    else
+    else if(motor_temp < MOTOR_TEMP_RECOVER)
     {
-        if (motor_temp < MOTOR_TEMP_RECOVER)
-        {
-            clr_err(ERR_OVER_TEMP_MOTOR);
-        }
+        clr_err(ERR_OVER_TEMP_MOTOR);
     }
-    if (!(ODObjs.error_code & ERR_OVER_TEMP_DRV)) 
+
+    if(!(ODObjs.error_code & ERR_OVER_TEMP_DRV))
     {
-        if (board_temp > BOARD_TEMP_MAX)
+        if(board_temp > BOARD_TEMP_MAX)
         {
             set_err(ERR_OVER_TEMP_DRV);
             motor_ctrl.state = SOFT_STOP;
         }
     }
+    else if(board_temp < BOARD_TEMP_RECOVER)
+    {
+        clr_err(ERR_OVER_TEMP_DRV);
+    }
+
+    // 判断can_phy连通性
+    canfd_timeout_cnt++;
+    if(canfd_first_flag == 0)
+    {
+        if(canfd_timeout_cnt > 1000) // 跳过开始的10s
+        {
+            canfd_timeout_cnt = 0;
+            canfd_first_flag = 1;
+        }
+    }
     else
     {
-        if (board_temp < BOARD_TEMP_RECOVER)
+        if(canfd_timeout_cnt > 100) // canfd通信断开1s报警
         {
-            clr_err(ERR_OVER_TEMP_DRV);
+            canfd_timeout_cnt = 0;
+            canfd_frame_flag = 1;
         }
+    }
+
+    // 判断can_bus_off
+    static uint16_t can_buf_off_cnt = 0;
+    if(CanfdRegs.CFG_STAT.bit.BUSOFF) // 如果检测到canfd总线关闭
+    {
+        can_buf_off_cnt++;
+        if(can_buf_off_cnt > 100) 
+        {
+            can_buf_off_cnt = 0;
+            canfd_buf_off_flag = 1;
+        }
+    }
+    else
+    {
+        can_buf_off_cnt = 0;
+        canfd_buf_off_flag = 0;
     }
 }
