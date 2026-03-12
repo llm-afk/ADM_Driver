@@ -120,7 +120,7 @@ void encoder_loop(void)
     // 更新电角度
     if(motor_ctrl.state == MIT)
     {
-        encoder.elec_degree = (uint16_t)((encoder.enc_degree_lined - encoder_config.elec_degree_calib) & 0x7FF) << 5;
+        encoder.elec_degree = 65535-(uint16_t)((encoder.enc_degree_lined - encoder_config.elec_degree_calib) & 0x7FF) << 5;
 
         if(!encoder_config.encoder_reverse)
         {
@@ -179,7 +179,7 @@ uint16_t encoder_calibrate(void)
                     degree_dif += ENCODER_CPR;
                 }
 
-                if(degree_dif < 0)
+                if(degree_dif > 0)
                 {
                     encoder_config.encoder_reverse ^= 1;
                 }

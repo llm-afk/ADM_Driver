@@ -96,7 +96,7 @@ void MC_servo_loop(void)
 
             out_q14 = CLAMP(out_q14, -67108864, 67108864); // 4096 * 16384 软件限制最大电流为额定电流
             
-            Iq = out_q14 >> 14; 
+            Iq = -out_q14 >> 14; 
             Id = 0;
             // static uint16_t mit_cnt = 0;
             // mit_cnt++;
