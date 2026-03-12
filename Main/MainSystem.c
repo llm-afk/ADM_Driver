@@ -91,8 +91,7 @@ interrupt void ZeroOfEPWMISR(void)
 
     #if(DEBUG == 1)
     static uint16_t cnt = 0;
-    debug_buffer_1[cnt] = CanfdRegs.ECNT.bit.RECNT;
-    debug_buffer_2[cnt] = CanfdRegs.ECNT.bit.TECNT;
+    debug_buffer_1[cnt] = gIMT.M;
     cnt++;
     cnt%=2000;
     #endif

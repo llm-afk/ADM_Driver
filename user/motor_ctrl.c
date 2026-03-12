@@ -92,12 +92,23 @@ void MC_servo_loop(void)
 
             int32_t out_q14 = (int32_t)(((int64_t)motor_ctrl.Kp_q14 * degree_err_q14) >> 14) \
                             + (int32_t)(((int64_t)motor_ctrl.Kd_q14 * velocity_err_q14) >> 14) \
-                            + (int32_t)((int64_t)motor_ctrl.current_ref_q14 * 40960 / MOTOR_RATED_CUR);
+                            + (int32_t)((int64_t)motor_ctrl.current_ref_q14 * 40960 / (MOTOR_RATED_CUR * 1.41421356f)); // 直接把电流目标值换算成q14格式的输出值，减少一次乘法计算
 
-            out_q14 = CLAMP(out_q14, -85196800, 85196800); // 5200 * 16384
+            out_q14 = CLAMP(out_q14, -67108864, 67108864); // 4096 * 16384 软件限制最大电流为额定电流
             
             Iq = out_q14 >> 14; 
             Id = 0;
+            // static uint16_t mit_cnt = 0;
+            // mit_cnt++;
+            // if(mit_cnt == 20) // 100hz更新一次mit输出
+            // {
+            //     Id = 512;
+            // }
+            // else if(mit_cnt == 40) // 200hz更新一次mit输出
+            // {
+            //     mit_cnt = 0;
+            //     Id = 0;
+            // }
             break;
         }
         case ENCODER_CALIBRATE: 

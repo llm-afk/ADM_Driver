@@ -10,6 +10,7 @@
 #include "PreDriver.h"
 #include "AngleSensor.h"
 #include "encoder.h"
+#include "canfd.h"
 
 void ParameterChange(void);	
 void CalCarrierWaveFreq(void);
@@ -1732,6 +1733,38 @@ void calc_out_angle2()
     gPhase.OutPhase = data;
 }
 
+typedef struct
+{
+    int16_t x1;   // n-1
+    int16_t x2;   // n-2
+} MedianFilter_t;
+
+static inline int16_t median3(int16_t a, int16_t b, int16_t c)
+{
+    if (a > b)
+    {
+        if (b > c) return b;
+        else if (a > c) return c;
+        else return a;
+    }
+    else
+    {
+        if (a > c) return a;
+        else if (b > c) return c;
+        else return b;
+    }
+}
+
+int16_t Filter_SingleSpike(int16_t input, MedianFilter_t *f)
+{
+    int16_t out = median3(f->x2, f->x1, input);
+
+    f->x2 = f->x1;
+    f->x1 = input;
+
+    return out;
+}
+
 #pragma CODE_SECTION(MotorControlISR, "ramfuncs");
 void MotorControlISR()
 {
@@ -1745,16 +1778,45 @@ void MotorControlISR()
 #endif
     ChangeCurrent();
 
-    // {
-    //     // 对电流回采数据iq和id定点一阶低通滤波处理
-    //     static int32_t M_q20 = 0, T_q20 = 0;
-        
-    //     M_q20 += (((int32_t)gIMT.M << 20) - M_q20) >> 1;
-    //     T_q20 += (((int32_t)gIMT.T << 20) - T_q20) >> 1;
+    static MedianFilter_t filter_M = {0};
+    static MedianFilter_t filter_T = {0};
 
-    //     gIMT.M = (int16_t)((M_q20 + (1 << 19)) >> 20);
-    //     gIMT.T = (int16_t)((T_q20 + (1 << 19)) >> 20);
-    // }
+    gIMT.M = Filter_SingleSpike(gIMT.M, &filter_M);
+    gIMT.T = Filter_SingleSpike(gIMT.T, &filter_T);
+
+    // 定义滤波系数的移位量 n。 
+    // 1 代表 1/2， 2 代表 1/4， 3 代表 1/8，以此类推
+    #define FILTER_SHIFT  1  
+
+    {
+        // 这里的累加器存的不是真实的电流值，而是 真实值 * (2^n)
+        static int32_t M_acc = 0, T_acc = 0;
+        
+        // 极简滤波核心算法：累加器 += 原始输入 - 当前输出
+        M_acc += (int32_t)gIMT.M - (M_acc >> FILTER_SHIFT);
+        T_acc += (int32_t)gIMT.T - (T_acc >> FILTER_SHIFT);
+
+        // 提取结果并带四舍五入 (Rounding)
+        // (1 << (FILTER_SHIFT - 1)) 的作用相当于加 0.5 实现四舍五入
+        gIMT.M = (int16_t)((M_acc + (1 << (FILTER_SHIFT - 1))) >> FILTER_SHIFT);
+        gIMT.T = (int16_t)((T_acc + (1 << (FILTER_SHIFT - 1))) >> FILTER_SHIFT);
+    }
+
+    switch(m_node_id) // pwm_f = 100M / (2 * gPWM.gPWMPrdApply)
+    {
+        case 1:
+            gPWM.gPWMPrdApply = 2500;
+            break;
+        case 2:
+            gPWM.gPWMPrdApply = 2483;
+            break;
+        case 3:
+            gPWM.gPWMPrdApply = 2523;
+            break;
+        case 4:
+            gPWM.gPWMPrdApply = 2469;
+            break;
+    }
 
     if (gMainCmd.Command.bit.Start == TRUE)
     {

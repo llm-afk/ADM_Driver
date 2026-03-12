@@ -61,7 +61,9 @@ static inline float imt_current_to_float(int16_t M, int16_t T, float rated_cur)
     if ((M + T) < 0)
         mag = -mag;
 
-    return (float)mag * rated_cur / 40960.0f;
+    // rated_cur *= 1.41421356f;
+    // return (float)mag * rated_cur / 40960.0f;
+    return (float)mag * rated_cur * 3.4526703e-5f;
 }
 
 #endif
