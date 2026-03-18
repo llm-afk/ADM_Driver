@@ -90,25 +90,28 @@ void MC_servo_loop(void)
             degree_err_q14   = CLAMP(degree_err_q14,  -163840,  163840); // 解决位置目标值和实际值过大导致计算中间过程溢出导致反向转动的问题
             velocity_err_q14 = CLAMP(velocity_err_q14,-1638400, 1638400);
 
-            int32_t out_q14 = (int32_t)(((int64_t)motor_ctrl.Kp_q14 * degree_err_q14) >> 14) \
-                            + (int32_t)(((int64_t)motor_ctrl.Kd_q14 * velocity_err_q14) >> 14) \
-                            + (int32_t)((int64_t)motor_ctrl.current_ref_q14 * 40960 / (MOTOR_RATED_CUR * 1.41421356f)); // 直接把电流目标值换算成q14格式的输出值，减少一次乘法计算
+            int32_t out_q14 = (int32_t)((((int64_t)motor_ctrl.Kp_q14 * degree_err_q14) >> 14) * MOTOR_RATED_CUR * 1.41421356f / 40960) \
+                            + (int32_t)((((int64_t)motor_ctrl.Kd_q14 * velocity_err_q14) >> 14) * MOTOR_RATED_CUR * 1.41421356f / 40960) \
+                            + motor_ctrl.torque_ref_q14; 
 
-            out_q14 = CLAMP(out_q14, -67108864, 67108864); // 4096 * 16384 软件限制最大电流为额定电流
+            out_q14 = CLAMP(out_q14, -491520, 491520); // 30 * 16384
             
-            Iq = -out_q14 >> 14; 
+            Iq = Torque_To_Iq(-out_q14 / 16384.0f) * 40960 / (MOTOR_RATED_CUR * 1.41421356f); 
             Id = 0;
             // static uint16_t mit_cnt = 0;
             // mit_cnt++;
             // if(mit_cnt == 20) // 100hz更新一次mit输出
             // {
-            //     Id = 512;
+            //     Id = 500;
             // }
             // else if(mit_cnt == 40) // 200hz更新一次mit输出
             // {
             //     mit_cnt = 0;
             //     Id = 0;
             // }
+
+
+        
             break;
         }
         case ENCODER_CALIBRATE: 

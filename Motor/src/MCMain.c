@@ -1784,22 +1784,21 @@ void MotorControlISR()
     gIMT.M = Filter_SingleSpike(gIMT.M, &filter_M);
     gIMT.T = Filter_SingleSpike(gIMT.T, &filter_T);
 
-    // 定义滤波系数的移位量 n。 
-    // 1 代表 1/2， 2 代表 1/4， 3 代表 1/8，以此类推
-    #define FILTER_SHIFT  1  
+    #define FILTER_SHIFT 1
+    #define EXTRA_BITS   12
 
     {
-        // 这里的累加器存的不是真实的电流值，而是 真实值 * (2^n)
-        static int32_t M_acc = 0, T_acc = 0;
-        
-        // 极简滤波核心算法：累加器 += 原始输入 - 当前输出
-        M_acc += (int32_t)gIMT.M - (M_acc >> FILTER_SHIFT);
-        T_acc += (int32_t)gIMT.T - (T_acc >> FILTER_SHIFT);
+        static int32_t M_acc = 0;
+        static int32_t T_acc = 0;
 
-        // 提取结果并带四舍五入 (Rounding)
-        // (1 << (FILTER_SHIFT - 1)) 的作用相当于加 0.5 实现四舍五入
-        gIMT.M = (int16_t)((M_acc + (1 << (FILTER_SHIFT - 1))) >> FILTER_SHIFT);
-        gIMT.T = (int16_t)((T_acc + (1 << (FILTER_SHIFT - 1))) >> FILTER_SHIFT);
+        int32_t M_in = ((int32_t)gIMT.M) << EXTRA_BITS;
+        int32_t T_in = ((int32_t)gIMT.T) << EXTRA_BITS;
+
+        M_acc += M_in - (M_acc >> FILTER_SHIFT);
+        T_acc += T_in - (T_acc >> FILTER_SHIFT);
+
+        gIMT.M = (int16_t)((M_acc + (1 << (FILTER_SHIFT + EXTRA_BITS - 1))) >> (FILTER_SHIFT + EXTRA_BITS));
+        gIMT.T = (int16_t)((T_acc + (1 << (FILTER_SHIFT + EXTRA_BITS - 1))) >> (FILTER_SHIFT + EXTRA_BITS));
     }
 
     switch(m_node_id) // pwm_f = 100M / (2 * gPWM.gPWMPrdApply)

@@ -45,7 +45,7 @@ typedef struct {
 
     int32_t degree_ref_q14;   // 输出端目标角度 rad
     int32_t velocity_ref_q14; // 输出端目标速度 rad/s
-    int32_t current_ref_q14;  // mit前馈电流 A
+    int32_t torque_ref_q14;   // mit前馈力矩 nm
     uint32_t Kp_q14;          // mit_kp 0.01
     uint32_t Kd_q14;          // mit_kd 0.01
 

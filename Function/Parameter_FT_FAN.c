@@ -74,7 +74,7 @@ unsigned int MidAllowUdcLimit     =  155;
 unsigned int DeadTimeInternal     =  ((long)DEAD_TIME * DSP_CLOCK) / 100;               // 死区时间
 unsigned int DeadTimeCompInternal =  ((long)DEAD_COMPENATION_TIME * DSP_CLOCK) / 100;   // 死区补偿时间
 
-#define HARDWARE_OVER_CUR            (MAX_PEAK_CUR_3_3V *0.98f) //! 硬件比较器的过流阈值，根据硬件设计决定
+#define HARDWARE_OVER_CUR            (MAX_PEAK_CUR_3_3V *1.0f) //! 硬件比较器的过流阈值，根据硬件设计决定
 #define HARDWARE_CBC_CUR             (MAX_PEAK_CUR_3_3V *0.95f) // CBC过流比较值, 8.00A 逐波限流实际没有用到
 unsigned int OverCurPointInternal =  ((long)HARDWARE_OVER_CUR << 9) / MAX_PEAK_CUR_3_3V + 512;   // 硬件过流比较值
 unsigned int CBCCurPointInternal  =  ((long)HARDWARE_CBC_CUR  << 9) / MAX_PEAK_CUR_3_3V + 512;   // CBC过流比较值
@@ -132,10 +132,15 @@ unsigned int HIGH_SPEED_KP_GAIN     =  10;
 ///////////////////////////////////////////////////////////////////////////////////////
 // 电流环环参数设置
 ///////////////////////////////////////////////////////////////////////////////////////
-unsigned int D_CUR_KI               =  200; // !
-unsigned int D_CUR_KP               =  0;  // !
-unsigned int Q_CUR_KI               =  200; // !
-unsigned int Q_CUR_KP               =  0;  // !
+unsigned int D_CUR_KI               =  300; // !
+unsigned int D_CUR_KP               =  400;  // !
+unsigned int Q_CUR_KI               =  300; // !
+unsigned int Q_CUR_KP               =  400;  // !
+
+// unsigned int D_CUR_KI               =  200; // !
+// unsigned int D_CUR_KP               =  300;  // !
+// unsigned int Q_CUR_KI               =  200; // !
+// unsigned int Q_CUR_KP               =  300;  // !
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // 控制参数设置

@@ -66,4 +66,7 @@ static inline float imt_current_to_float(int16_t M, int16_t T, float rated_cur)
     return -(float)mag * rated_cur * 3.4526703e-5f;
 }
 
+float Iq_To_Torque(float iq);
+float Torque_To_Iq(float target_torque);
+
 #endif
