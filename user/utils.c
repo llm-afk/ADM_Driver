@@ -89,17 +89,19 @@ float Iq_To_Torque(float iq) {
  * @brief  反向补偿：目标期望力矩(Nm) -> 需要下发的q轴电流(A)
  * @note   算法复杂度 O(log N)，支持正反转，包含深度饱和兜底
  */
-float Torque_To_Iq(float target_torque) {
-    // 1. 提符号并取绝对值
+float Torque_To_Iq(float target_torque)
+{
     float sign = (target_torque < 0.0f) ? -1.0f : 1.0f;
     float abs_torque = (target_torque < 0.0f) ? -target_torque : target_torque;
+
+    if (abs_torque <= 0.0f) {
+        return 0.0f;
+    }
+
     float abs_iq;
 
-    // 2. 查表范围判定 (同样用 < 严格防止右侧越界)
     if (abs_torque < MAX_LUT_TORQUE) {
         int left = 0, right = LUT_SIZE - 1, mid;
-        
-        // 二分查找 (MCU只需最多查7次，远快于多项式算次方)
         while (left <= right) {
             mid = (left + right) >> 1;
             if (ESTIMATED_TORQUE_LUT[mid] < abs_torque) {
@@ -108,16 +110,15 @@ float Torque_To_Iq(float target_torque) {
                 right = mid - 1;
             }
         }
-        
-        // 此时 right 即为锁定区间的左侧索引
+
         int index = right;
+        if (index < 0) index = 0;
+        if (index >= LUT_SIZE - 1) index = LUT_SIZE - 2;
+
         float torque_diff = ESTIMATED_TORQUE_LUT[index+1] - ESTIMATED_TORQUE_LUT[index];
         float weight = (abs_torque - ESTIMATED_TORQUE_LUT[index]) / torque_diff;
-        
-        // 索引 * 0.5 步长 + 权重 * 0.5 步长
-        abs_iq = (index + weight) * 0.5f; 
+        abs_iq = (index + weight) * 0.5f;
     } else {
-        // 3. 超过30.095Nm 时的兜底外推计算（比如要求35Nm，会自动推算出巨额电流）
         abs_iq = MAX_LUT_IQ + (abs_torque - MAX_LUT_TORQUE) * TAIL_SLOPE_A_PER_TQ;
     }
 

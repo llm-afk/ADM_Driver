@@ -1,7 +1,7 @@
 MEMORY
 {
 PAGE 0 :
-   RAMPRG      : origin = 0x008000, length = 0x001400  
+   RAMPRG      : origin = 0x008000, length = 0x001600  
 
    BEGIN       : origin = 0x3E8000, length = 0x000002
    APP_SPACE   : origin = 0x3E8002, length = 0x005FFE  
@@ -20,7 +20,7 @@ PAGE 0 :
 PAGE 1 :                                          
    RAMM0       : origin = 0x000100, length = 0x000300   
    RAMM1       : origin = 0x000400, length = 0x000400    
-   RAML0       : origin = 0x009400, length = 0x000C00
+   RAML0       : origin = 0x009600, length = 0x000A00
    RAMH0       : origin = 0x00A000, length = 0x002000
 }
 

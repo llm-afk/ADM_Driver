@@ -109,9 +109,6 @@ void MC_servo_loop(void)
             //     mit_cnt = 0;
             //     Id = 0;
             // }
-
-
-        
             break;
         }
         case ENCODER_CALIBRATE: 

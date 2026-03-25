@@ -31,6 +31,7 @@ extern long Id;
 extern int RunSignal;
 extern long pm_ref_id;
 extern long pm_ref_iq;
+extern uint16_t mode_flag;
 
 /************************************************************
 	引用函数说明

@@ -237,8 +237,11 @@ static void parse_frame(canFrame_t *frame)
             motor_ctrl.degree_ref_q14   = (int32_t)(*(float*)&frame->data[0] * 16384.0f); 
             motor_ctrl.velocity_ref_q14 = (int32_t)(*(float*)&frame->data[2] * 16384.0f); 
             motor_ctrl.torque_ref_q14   = (int32_t)(*(float*)&frame->data[4] * 16384.0f); 
-            motor_ctrl.Kp_q14           = ((uint32_t)(*(uint16_t*)&frame->data[6])) * 164 * 100; // q14格式缩放100倍
-            motor_ctrl.Kd_q14           = ((uint32_t)(*(uint16_t*)&frame->data[7])) * 164 * 100; // q14格式缩放100倍
+            motor_ctrl.Kp_q14           = ((uint32_t)(*(uint16_t*)&frame->data[6])) * 164 * 100; 
+            if(mode_flag == 0)
+            motor_ctrl.Kd_q14           = ((uint32_t)(*(uint16_t*)&frame->data[7])) * 164 * 130; 
+            else if(mode_flag == 1)
+            motor_ctrl.Kd_q14           = ((uint32_t)(*(uint16_t*)&frame->data[7])) * 164 * 100;
 
             // 数据上报
             frame->id = MSG_ID_TPDO_5 + m_node_id;    
@@ -267,8 +270,11 @@ static void parse_frame(canFrame_t *frame)
             motor_ctrl.degree_ref_q14   = (int32_t)(*(float*)&frame->data[0] * 16384.0f); 
             motor_ctrl.velocity_ref_q14 = (int32_t)(*(float*)&frame->data[2] * 16384.0f); 
             motor_ctrl.torque_ref_q14   = (int32_t)(*(float*)&frame->data[4] * 16384.0f); 
-            motor_ctrl.Kp_q14           = ((uint32_t)(*(uint16_t*)&frame->data[6])) * 164 * 100; // q14格式缩放100倍
-            motor_ctrl.Kd_q14           = ((uint32_t)(*(uint16_t*)&frame->data[7])) * 164 * 100; // q14格式缩放100倍
+            motor_ctrl.Kp_q14           = ((uint32_t)(*(uint16_t*)&frame->data[6])) * 164 * 100; 
+            if(mode_flag == 0)
+            motor_ctrl.Kd_q14           = ((uint32_t)(*(uint16_t*)&frame->data[7])) * 164 * 130; 
+            else if(mode_flag == 1)
+            motor_ctrl.Kd_q14           = ((uint32_t)(*(uint16_t*)&frame->data[7])) * 164 * 100;
 
             // 数据上报
             frame->id = MSG_ID_TPDO_5 + m_node_id;    

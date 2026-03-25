@@ -1737,33 +1737,177 @@ typedef struct
 {
     int16_t x1;   // n-1
     int16_t x2;   // n-2
-} MedianFilter_t;
+    int16_t x3;   // n-3
+    int16_t x4;   // n-4
+    int16_t x5;   // n-5
+    int16_t x6;   // n-6
+    uint16_t init;
+} Median7Filter_t;
 
-static inline int16_t median3(int16_t a, int16_t b, int16_t c)
+static inline void sort2(int16_t *a, int16_t *b)
 {
-    if (a > b)
+    int16_t t;
+    if (*a > *b)
     {
-        if (b > c) return b;
-        else if (a > c) return c;
-        else return a;
-    }
-    else
-    {
-        if (a > c) return a;
-        else if (b > c) return c;
-        else return b;
+        t = *a;
+        *a = *b;
+        *b = t;
     }
 }
 
-int16_t Filter_SingleSpike(int16_t input, MedianFilter_t *f)
+static inline int16_t median7(
+    int16_t a, int16_t b, int16_t c,
+    int16_t d, int16_t e, int16_t f, int16_t g)
 {
-    int16_t out = median3(f->x2, f->x1, input);
+    sort2(&a, &b);
+    sort2(&c, &d);
+    sort2(&e, &f);
 
+    sort2(&a, &c);
+    sort2(&b, &d);
+    sort2(&e, &g);
+
+    sort2(&a, &e);
+    sort2(&b, &f);
+    sort2(&c, &g);
+
+    sort2(&b, &c);
+    sort2(&d, &e);
+    sort2(&f, &g);
+
+    sort2(&c, &d);
+    sort2(&e, &f);
+
+    sort2(&d, &e);   // 最终中值
+
+    return d;
+}
+
+int16_t Filter_Median7(int16_t input, Median7Filter_t *f)
+{
+    int16_t out;
+
+    if (f->init == 0)
+    {
+        f->x1 = input;
+        f->x2 = input;
+        f->x3 = input;
+        f->x4 = input;
+        f->x5 = input;
+        f->x6 = input;
+        f->init = 1;
+        return input;
+    }
+
+    out = median7(f->x6, f->x5, f->x4, f->x3, f->x2, f->x1, input);
+
+    // ?? 历史必须是 input（原始数据）
+    f->x6 = f->x5;
+    f->x5 = f->x4;
+    f->x4 = f->x3;
+    f->x3 = f->x2;
     f->x2 = f->x1;
     f->x1 = input;
 
     return out;
 }
+
+/* 对输入 seed 做一次扰动，得到伪随机值 */
+static uint32_t rng_get_from_seed(uint32_t seed)
+{
+    uint32_t x = seed;
+
+    /* 避免全0状态 */
+    if (x == 0U)
+    {
+        x = 0x6D2B79F5UL;
+    }
+
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+
+    return x;
+}
+
+/**
+ * @brief 根据输入种子，获取一个指定正负范围内的随机值
+ * @param seed 输入种子（int32_t）
+ * @param num 正负边界，25表示范围 -25 ~ +25
+ * @return int32_t 随机值
+ *
+ * 说明：
+ * 1. 相同 seed -> 相同输出
+ * 2. 不同 seed -> 大概率不同输出
+ */
+int32_t get_rand_num_from_seed(int32_t seed, int32_t num)
+{
+    uint32_t x;
+    uint32_t range;
+
+    if (num <= 0)
+    {
+        return 0;
+    }
+
+    x = rng_get_from_seed((uint32_t)seed);
+    range = (uint32_t)num * 2U + 1U;
+
+    return (int32_t)(x % range) - num;
+}
+
+#define MODE_ENTER_TH   3000     // 进入狂暴模式阈值
+#define MODE_EXIT_TH    2500     // 退出狂暴模式阈值（回差）
+#define MODE_EXIT_CNT   2000    // 100ms @ 20kHz
+
+static uint16_t mode_exit_delay_cnt = 0;
+
+void ModeSwitchTask(void)
+{
+    int abs_t = INT_ABS(gIMT.T);
+
+    // 满足条件，立刻进入模式1
+    if(abs_t > MODE_ENTER_TH)
+    {
+        mode_flag = 1;
+        mode_exit_delay_cnt = 0;
+    }
+    else
+    {
+        // 当前已经在模式1，才考虑退出
+        if(mode_flag == 1)
+        {
+            // 只有当扭矩已经明显降下来了，才开始计时退出
+            if(abs_t < MODE_EXIT_TH)
+            {
+                if(mode_exit_delay_cnt < MODE_EXIT_CNT)
+                {
+                    mode_exit_delay_cnt++;
+                }
+                else
+                {
+                    mode_flag = 0;
+                    mode_exit_delay_cnt = 0;
+                }
+            }
+            else
+            {
+                // 还没真正稳定下来，清零退出计数
+                mode_exit_delay_cnt = 0;
+            }
+        }
+    }
+}
+
+static Median7Filter_t filter_M = {0};
+static Median7Filter_t filter_T = {0};
+
+uint16_t d_kp = 0;
+uint16_t d_ki = 0;
+uint16_t q_kp = 0;
+uint16_t q_ki = 0;    
+
+uint16_t mode_flag = 0; // 0-安静模式 1-狂暴模式
 
 #pragma CODE_SECTION(MotorControlISR, "ramfuncs");
 void MotorControlISR()
@@ -1778,16 +1922,16 @@ void MotorControlISR()
 #endif
     ChangeCurrent();
 
-    static MedianFilter_t filter_M = {0};
-    static MedianFilter_t filter_T = {0};
+    //ModeSwitchTask();
 
-    gIMT.M = Filter_SingleSpike(gIMT.M, &filter_M);
-    gIMT.T = Filter_SingleSpike(gIMT.T, &filter_T);
-
-    #define FILTER_SHIFT 1
-    #define EXTRA_BITS   12
-
+    if(mode_flag == 0)
     {
+        gIMT.M = Filter_Median7(gIMT.M, &filter_M);
+        gIMT.T = Filter_Median7(gIMT.T, &filter_T);
+
+        #define FILTER_SHIFT 2
+        #define EXTRA_BITS   12
+
         static int32_t M_acc = 0;
         static int32_t T_acc = 0;
 
@@ -1799,23 +1943,38 @@ void MotorControlISR()
 
         gIMT.M = (int16_t)((M_acc + (1 << (FILTER_SHIFT + EXTRA_BITS - 1))) >> (FILTER_SHIFT + EXTRA_BITS));
         gIMT.T = (int16_t)((T_acc + (1 << (FILTER_SHIFT + EXTRA_BITS - 1))) >> (FILTER_SHIFT + EXTRA_BITS));
+
+        d_kp = 100;
+        d_ki = 100;
+        q_kp = 100;
+        q_ki = 100;    
+    }
+    else
+    {
+        d_kp = 100;
+        d_ki = 100;
+        q_kp = 100;
+        q_ki = 100;    
     }
 
-    switch(m_node_id) // pwm_f = 100M / (2 * gPWM.gPWMPrdApply)
+    D_CUR_KP =  d_kp;  
+    D_CUR_KI =  d_ki; 
+    Q_CUR_KP =  q_kp;  
+    Q_CUR_KI =  q_ki; 
+
+    static uint16_t flag = 0;
+    static uint16_t rand_num = 0;
+    static uint16_t num = 0;
+    if(flag == 0)
     {
-        case 1:
-            gPWM.gPWMPrdApply = 2500;
-            break;
-        case 2:
-            gPWM.gPWMPrdApply = 2483;
-            break;
-        case 3:
-            gPWM.gPWMPrdApply = 2523;
-            break;
-        case 4:
-            gPWM.gPWMPrdApply = 2469;
-            break;
+        rand_num = get_rand_num_from_seed(gIMT.M, 27);
+        num++;
+        if(num > 100)
+        {
+            flag = 1;
+        }
     }
+    gPWM.gPWMPrdApply = 2597 - ((m_node_id - 1) * 67) + rand_num;
 
     if (gMainCmd.Command.bit.Start == TRUE)
     {
