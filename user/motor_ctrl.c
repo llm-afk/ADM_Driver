@@ -98,6 +98,7 @@ void MC_servo_loop(void)
             
             Iq = Torque_To_Iq(-out_q14 / 16384.0f) * 40960 / (MOTOR_RATED_CUR * 1.41421356f); 
             Id = 0;
+
             // static uint16_t mit_cnt = 0;
             // mit_cnt++;
             // if(mit_cnt == 20) // 100hz更新一次mit输出
@@ -126,37 +127,8 @@ void MC_servo_loop(void)
         }
         case SOFT_STOP:
         {
-            static int32_t Iq_init = 0;
-            static int32_t Id_init = 0;
-            static uint16_t ramp_count = 0;
-            static uint16_t  ramp_flag = 0;
-            
-            #define RAMP_STEPS 4000 
-            
-            if(ramp_flag == 0)
-            {
-                ramp_flag = 1;
-                ramp_count = 0;
-                Iq_init = Iq;
-                Id_init = Id;
-            }
-            if(ramp_count < RAMP_STEPS)
-            {
-                ramp_count++;
-                
-                // I = I_init × (STEPS - count) / STEPS
-                Iq = (int16_t)((Iq_init * (int32_t)(RAMP_STEPS - ramp_count)) / RAMP_STEPS);
-                Id = (int16_t)((Id_init * (int32_t)(RAMP_STEPS - ramp_count)) / RAMP_STEPS);
-            }
-            else
-            {
-                Iq = 0;
-                Id = 0;
-                ramp_flag = 0;
-                RunSignal = 0; // 清除电机使能位
-                motor_ctrl.state = STOPPED;
-            }
-            
+            DisableDrive();
+            motor_ctrl.state = STOPPED;
             break;
         }
         case STOPPED:
@@ -217,7 +189,7 @@ void info_collect_loop(void)
     static float motor_temp_filt;
     static uint16_t temp_filt_inited = 0;
 
-    const float alpha = 0.01f;
+    const float alpha = 0.001f;
 
     /* -------- 驱动板温度 -------- */
     r_ntc = R_PULLUP * ADC_NTC / (4095.0f - ADC_NTC);

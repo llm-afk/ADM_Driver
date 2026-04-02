@@ -4,5 +4,5 @@
 	<isTargetManual value="false"/>
 	<deviceFamily value="C2000"/>
 	<sourceLookupPath value=""/>
-	<connection value="common/targetdb/connections/TIXDS100usb_Connection.xml"/>
+	<connection value="common/targetdb/connections/TIXDS110_Connection.xml"/>
 </projectOptions>

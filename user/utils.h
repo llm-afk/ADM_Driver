@@ -3,6 +3,33 @@
 
 #include "MainInclude.h"
 
+typedef struct
+{
+    int16_t x1;   // n-1
+    int16_t x2;   // n-2
+    uint16_t init;
+} Median3Filter_t;
+
+typedef struct
+{
+    int16_t x1;   // n-1
+    int16_t x2;   // n-2
+    int16_t x3;   // n-3
+    int16_t x4;   // n-4
+    uint16_t init;
+} Median5Filter_t;
+
+typedef struct
+{
+    int16_t x1;   // n-1
+    int16_t x2;   // n-2
+    int16_t x3;   // n-3
+    int16_t x4;   // n-4
+    int16_t x5;   // n-5
+    int16_t x6;   // n-6
+    uint16_t init;
+} Median7Filter_t;
+
 #define M_PI    3.1415927410f
 #define TWO_PI  6.2831854820f
 
@@ -15,58 +42,13 @@
 uint32_t square(uint64_t x);
 float logf(float x);
 
-/**
- * @brief  计算电流模长并转换为 float（上报用，极速）
- *         approx sqrt(M^2 + T^2)
- *
- * @param  M  M轴电流（定点）
- * @param  T  T轴电流（定点）
- * @param  rated_cur  电机额定电流(A)
- *
- * @return 电流值(A)，float
- */
-static inline float imt_current_to_float(int16_t M, int16_t T, float rated_cur)
-{
-    int32_t absM, absT;
-
-    // -------- 安全 abs，避免 -32768 溢出 --------
-    if (M == (int16_t)0x8000)
-        absM = 32767;
-    else
-        absM = (M >= 0) ? M : -M;
-
-    if (T == (int16_t)0x8000)
-        absT = 32767;
-    else
-        absT = (T >= 0) ? T : -T;
-
-    // -------- 可选：限幅（强烈建议） --------
-    if (absM > 32767) absM = 32767;
-    if (absT > 32767) absT = 32767;
-
-    // -------- 近似模长 --------
-    int32_t maxv, minv;
-    if (absM > absT) {
-        maxv = absM;
-        minv = absT;
-    } else {
-        maxv = absT;
-        minv = absM;
-    }
-
-    // mag ≈ max + 0.375 * min
-    int32_t mag = maxv + ((minv * 3) >> 3);
-
-    // -------- 符号（保持你原逻辑） --------
-    if ((M + T) < 0)
-        mag = -mag;
-
-    // rated_cur *= 1.41421356f;
-    // return (float)mag * rated_cur / 40960.0f;
-    return -(float)mag * rated_cur * 3.4526703e-5f;
-}
-
 float Iq_To_Torque(float iq);
 float Torque_To_Iq(float target_torque);
+
+float imt_current_to_float(int16_t M, int16_t T, float rated_cur);
+
+int16_t Filter_Median3(int16_t input, Median3Filter_t *f);
+int16_t Filter_Median5(int16_t input, Median5Filter_t *f);
+int16_t Filter_Median7(int16_t input, Median7Filter_t *f);
 
 #endif

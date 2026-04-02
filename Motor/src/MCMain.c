@@ -1733,85 +1733,6 @@ void calc_out_angle2()
     gPhase.OutPhase = data;
 }
 
-typedef struct
-{
-    int16_t x1;   // n-1
-    int16_t x2;   // n-2
-    int16_t x3;   // n-3
-    int16_t x4;   // n-4
-    int16_t x5;   // n-5
-    int16_t x6;   // n-6
-    uint16_t init;
-} Median7Filter_t;
-
-static inline void sort2(int16_t *a, int16_t *b)
-{
-    int16_t t;
-    if (*a > *b)
-    {
-        t = *a;
-        *a = *b;
-        *b = t;
-    }
-}
-
-static inline int16_t median7(
-    int16_t a, int16_t b, int16_t c,
-    int16_t d, int16_t e, int16_t f, int16_t g)
-{
-    sort2(&a, &b);
-    sort2(&c, &d);
-    sort2(&e, &f);
-
-    sort2(&a, &c);
-    sort2(&b, &d);
-    sort2(&e, &g);
-
-    sort2(&a, &e);
-    sort2(&b, &f);
-    sort2(&c, &g);
-
-    sort2(&b, &c);
-    sort2(&d, &e);
-    sort2(&f, &g);
-
-    sort2(&c, &d);
-    sort2(&e, &f);
-
-    sort2(&d, &e);   // 最终中值
-
-    return d;
-}
-
-int16_t Filter_Median7(int16_t input, Median7Filter_t *f)
-{
-    int16_t out;
-
-    if (f->init == 0)
-    {
-        f->x1 = input;
-        f->x2 = input;
-        f->x3 = input;
-        f->x4 = input;
-        f->x5 = input;
-        f->x6 = input;
-        f->init = 1;
-        return input;
-    }
-
-    out = median7(f->x6, f->x5, f->x4, f->x3, f->x2, f->x1, input);
-
-    // ?? 历史必须是 input（原始数据）
-    f->x6 = f->x5;
-    f->x5 = f->x4;
-    f->x4 = f->x3;
-    f->x3 = f->x2;
-    f->x2 = f->x1;
-    f->x1 = input;
-
-    return out;
-}
-
 /* 对输入 seed 做一次扰动，得到伪随机值 */
 static uint32_t rng_get_from_seed(uint32_t seed)
 {
@@ -1856,58 +1777,13 @@ int32_t get_rand_num_from_seed(int32_t seed, int32_t num)
     return (int32_t)(x % range) - num;
 }
 
-#define MODE_ENTER_TH   3000     // 进入狂暴模式阈值
-#define MODE_EXIT_TH    2500     // 退出狂暴模式阈值（回差）
-#define MODE_EXIT_CNT   2000    // 100ms @ 20kHz
+Median7Filter_t mf7_M = {0};
+Median7Filter_t mf7_T = {0};
 
-static uint16_t mode_exit_delay_cnt = 0;
-
-void ModeSwitchTask(void)
-{
-    int abs_t = INT_ABS(gIMT.T);
-
-    // 满足条件，立刻进入模式1
-    if(abs_t > MODE_ENTER_TH)
-    {
-        mode_flag = 1;
-        mode_exit_delay_cnt = 0;
-    }
-    else
-    {
-        // 当前已经在模式1，才考虑退出
-        if(mode_flag == 1)
-        {
-            // 只有当扭矩已经明显降下来了，才开始计时退出
-            if(abs_t < MODE_EXIT_TH)
-            {
-                if(mode_exit_delay_cnt < MODE_EXIT_CNT)
-                {
-                    mode_exit_delay_cnt++;
-                }
-                else
-                {
-                    mode_flag = 0;
-                    mode_exit_delay_cnt = 0;
-                }
-            }
-            else
-            {
-                // 还没真正稳定下来，清零退出计数
-                mode_exit_delay_cnt = 0;
-            }
-        }
-    }
-}
-
-static Median7Filter_t filter_M = {0};
-static Median7Filter_t filter_T = {0};
-
-uint16_t d_kp = 0;
-uint16_t d_ki = 0;
-uint16_t q_kp = 0;
-uint16_t q_ki = 0;    
-
-uint16_t mode_flag = 0; // 0-安静模式 1-狂暴模式
+uint16_t d_kp = 380;
+uint16_t d_ki = 240;
+uint16_t q_kp = 380;
+uint16_t q_ki = 240;
 
 #pragma CODE_SECTION(MotorControlISR, "ramfuncs");
 void MotorControlISR()
@@ -1922,13 +1798,10 @@ void MotorControlISR()
 #endif
     ChangeCurrent();
 
-    //ModeSwitchTask();
+    gIMT.M = Filter_Median7(gIMT.M, &mf7_M);
+    gIMT.T = Filter_Median7(gIMT.T, &mf7_T);
 
-    if(mode_flag == 0)
     {
-        gIMT.M = Filter_Median7(gIMT.M, &filter_M);
-        gIMT.T = Filter_Median7(gIMT.T, &filter_T);
-
         #define FILTER_SHIFT 2
         #define EXTRA_BITS   12
 
@@ -1943,18 +1816,6 @@ void MotorControlISR()
 
         gIMT.M = (int16_t)((M_acc + (1 << (FILTER_SHIFT + EXTRA_BITS - 1))) >> (FILTER_SHIFT + EXTRA_BITS));
         gIMT.T = (int16_t)((T_acc + (1 << (FILTER_SHIFT + EXTRA_BITS - 1))) >> (FILTER_SHIFT + EXTRA_BITS));
-
-        d_kp = 100;
-        d_ki = 100;
-        q_kp = 100;
-        q_ki = 100;    
-    }
-    else
-    {
-        d_kp = 100;
-        d_ki = 100;
-        q_kp = 100;
-        q_ki = 100;    
     }
 
     D_CUR_KP =  d_kp;  
@@ -1967,7 +1828,7 @@ void MotorControlISR()
     static uint16_t num = 0;
     if(flag == 0)
     {
-        rand_num = get_rand_num_from_seed(gIMT.M, 27);
+        rand_num = get_rand_num_from_seed(gIMT.M, 28);
         num++;
         if(num > 100)
         {

@@ -19,8 +19,6 @@ const lpg_seg_t error_temp[]        = {{4,1},{5,0},{120,0}};
 const lpg_seg_t error_can_phy_off[] = {{4,1},{5,0},{4,1},{5,0},{120,0}};
 const lpg_seg_t error_can_bus_off[] = {{4,1},{5,0},{4,1},{5,0},{4,1},{5,0},{120,0}};
 
-const lpg_seg_t boost[] = {{3,1},{3,0}};
-
 typedef enum{
     LED_OFF,
     LED_ON,
@@ -28,7 +26,6 @@ typedef enum{
     LED_ERR,
     LED_ERR_CAN_PHY_OFF,
     LED_ERR_CAN_BUS_OFF,
-    LED_BOOST_FLAG,
 }led_state_t;
 
 led_state_t led_state = LED_OFF;
@@ -67,15 +64,7 @@ void led_init(void)
 void led_loop(void)
 {
     static int RunSignal_last = 0;
-    if(mode_flag == 1)
-    {
-        led_state = LED_BOOST_FLAG;
-        if(led_state != led_state_last)
-        {
-            lpg_set_pattern(&lpg.units[0], boost, ARRAY_SIZE(boost));
-        }
-    }
-    else if(ODObjs.error_code)
+    if(ODObjs.error_code)
     {
         led_state = LED_ERR;
         if(led_state != led_state_last)
