@@ -15,7 +15,16 @@ static const OD_entry_t ODList[] =
 {
     {0x2000, &ODObjs.error_code,                2, ATTR_RAM | ATTR_R,  NULL},
     {0x2002, &ODObjs.control_word,              2, ATTR_RAM | ATTR_RW, MC_controlword_update},
-    {0x2040, &ODObjs.node_id,                   1, ATTR_ROM | ATTR_RW, NULL},  
+    
+    {0x2040, &ODObjs.node_id,                   1, ATTR_ROM | ATTR_RW, ResetDSP},  
+
+    {0x2043, &ODObjs.heartbeat_Producer_enable,2, ATTR_ROM | ATTR_RW, NULL},
+    {0x2044, &ODObjs.heartbeat_consumer_enable, 2, ATTR_ROM | ATTR_RW, NULL},
+    
+    {0x205B, &ODObjs.torque_limit,              4, ATTR_ROM | ATTR_RW, NULL},
+    {0x2060, &ODObjs.over_temp_drv_level,       4, ATTR_ROM | ATTR_RW, NULL},
+    {0x2061, &ODObjs.over_temp_motor_level,     4, ATTR_ROM | ATTR_RW, NULL},
+
     {0x2070, &ODObjs.in_encoder_offset,         2, ATTR_ROM | ATTR_RW, enc_set_zero}, // 标零只需要写入一次0x2070即可
     {0x2071, &ODObjs.ex_encoder_offset,         2, ATTR_ROM | ATTR_RW, NULL}, 
     {0x2100, &ODObjs.firmware_version,          2, ATTR_RAM | ATTR_R,  NULL},
@@ -25,10 +34,19 @@ static void dictionary_init(void)
 {
     ODObjs.error_code = 0;
     ODObjs.control_word = 0;
+
     ODObjs.node_id = 1;
+
+    ODObjs.heartbeat_Producer_enable = 0; // 默认关闭心跳上报功能
+    ODObjs.heartbeat_consumer_enable = 1; // 默认开启心跳监测功能
+
+    ODObjs.torque_limit = 30.0f;
+    ODObjs.over_temp_drv_level = 85.0f;
+    ODObjs.over_temp_motor_level = 125.0f;
+
     ODObjs.in_encoder_offset = 0;
     ODObjs.ex_encoder_offset = 0;
-    ODObjs.firmware_version = 7; 
+    ODObjs.firmware_version = 100; 
 }
 
 /**
@@ -44,6 +62,11 @@ static uint16_t get_eeprom_key_from_index(uint16_t idx)
         case 0x2040: return 0;   // node_id
         case 0x2070: return 2;   // in_encoder_offset
         case 0x2071: return 3;   // ex_encoder_offset
+        case 0x205B: return 4;   // torque_limit
+        case 0x2060: return 5;   // over_temp_drv_level
+        case 0x2061: return 6;   // over_temp_motor_level
+        case 0x2043: return 7;   // heartbeat_Producer_enable
+        case 0x2044: return 8;   // heartbeat_consumer_enable
         default: return 0xFF;    // 无效索引，返回错误标识
     }
 }

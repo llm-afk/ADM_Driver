@@ -36,6 +36,16 @@ static inline void canfd_config_filter_low7_dual(uint16_t id)
     CanfdRegs.CIA_ACF_CFG.bit.ACFADR = 0;
     CanfdRegs.ACF_0.all = 0xFF80;
     CanfdRegs.ACF_1.all = 0;
+
+    CanfdRegs.ACF_EN.bit.AE_1 = 1; // 使能第1个滤波器
+    CanfdRegs.CIA_ACF_CFG.bit.SELMASK = 0;
+    CanfdRegs.CIA_ACF_CFG.bit.ACFADR = 1; // 使用第0个滤波器
+    CanfdRegs.ACF_0.all = (0 & 0x007F);
+    CanfdRegs.ACF_1.all = 0;
+    CanfdRegs.CIA_ACF_CFG.bit.SELMASK = 1;
+    CanfdRegs.CIA_ACF_CFG.bit.ACFADR = 1;
+    CanfdRegs.ACF_0.all = 0xFF80;
+    CanfdRegs.ACF_1.all = 0;
 }
 
 /**
@@ -178,9 +188,6 @@ interrupt void canfd_IsrHander1(void)
                 canFrame_temp.len = CANFD_DLC_TO_LEN(CanfdRegs.RBUF.RIDST.bit.DLC);
                 memcpy(canFrame_temp.data, CanfdRegs.RBUF.DATA, ((canFrame_temp.len + 1) >> 1));
                 ringbuffer_in(&canFrameRxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
-
-                canfd_frame_flag = 0;
-                canfd_timeout_cnt = 0;
             }
             CanfdRegs.TCTRL.bit.RREL = 1;
         }
@@ -195,6 +202,7 @@ interrupt void canfd_IsrHander1(void)
 #pragma CODE_SECTION(parse_frame, "ramfuncs");
 static void parse_frame(canFrame_t *frame)
 {
+    canfd_timeout_cnt = 0; // 收到帧数据，清除canfd通信断开的计数
     uint16_t msg_id = GET_MSG_ID(frame->id);
     uint16_t node_id = GET_NODE_ID(frame->id);
     switch(msg_id)
@@ -327,13 +335,11 @@ static void parse_frame(canFrame_t *frame)
 
 uint16_t canfd_frame_flag = 0; // 用于指示当前是否有收到canfd帧数据 0-有 1-没有
 uint16_t canfd_timeout_cnt = 0; // 100hz记录没有canfd帧数据的时候累加值
-uint16_t canfd_first_flag = 0; // 跳过开始的若干时间的标志位
-
 uint16_t canfd_buf_off_flag = 0; // can_bus_off标志位 0-正常 1-关闭
+uint16_t heatbeat_flag = 0; // 心跳标志位 0-未发送 1-已发送
 
 /**
  * @brief can协议通信loop
- * @note 在stimer框架下面2khz执行
  */
 #pragma CODE_SECTION(can_com_loop, "ramfuncs");
 void can_com_loop(void)
@@ -341,31 +347,28 @@ void can_com_loop(void)
     canFrame_t canFrame_temp = {0};
 
     // RX loop
-    if(ringbuffer_used(&canFrameRxRingbuffer) >= sizeof(canFrame_t))
+    for(uint16_t i = 0; i < 3; i++)
     {
+        if(ringbuffer_used(&canFrameRxRingbuffer) < sizeof(canFrame_t))break;
         ringbuffer_out(&canFrameRxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
         parse_frame(&canFrame_temp);
     }
 
-    // TX loop
-    if(ringbuffer_used(&canFrameTxRingbuffer) >= sizeof(canFrame_t))
+    // heartbeat producter
+    if(ODObjs.heartbeat_Producer_enable && heatbeat_flag)
     {
+        canFrame_temp.id = MSG_ID_HEARTBEAT + m_node_id;
+        canFrame_temp.len = 1;
+        canFrame_temp.data[0] = 0x05;
+        enqueue_tx_frame(&canFrame_temp);
+        heatbeat_flag = 0;
+    }
+
+    // TX loop
+    for(uint16_t i = 0; i < 3; i++)
+    {
+        if(ringbuffer_used(&canFrameTxRingbuffer) < sizeof(canFrame_t))break;
         ringbuffer_out(&canFrameTxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
         sendCanFrame_fifo(&canFrame_temp);
     }
-
-    // 如果该节点处于can_bus_off状态超过一定时间，则尝试复位芯片来恢复通信
-    // static uint16_t busoff_cnt = 0; // 记录总线关闭的持续时间
-    // if(CanfdRegs.CFG_STAT.bit.BUSOFF) // 如果检测到canfd总线关闭
-    // {
-    //     busoff_cnt++;
-    //     if(busoff_cnt > 2000) 
-    //     {
-    //         ResetDSP(); // 复位
-    //     }
-    // }
-    // else
-    // {
-    //     busoff_cnt = 0;
-    // }
 }

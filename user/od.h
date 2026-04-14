@@ -12,9 +12,18 @@
 #define ATTR_RAM    0x08
 
 typedef struct {
-    uint16_t error_code;
-    uint16_t control_word;
-    uint16_t node_id;
+    uint16_t error_code;                  // tErrorCode
+    uint16_t control_word;                // MC_controlword_update
+
+    uint16_t node_id;         
+
+    uint16_t heartbeat_Producer_enable; // 是否开启驱动器的心跳上报功能，开启后驱动器会每秒发送一次心跳帧
+    uint16_t heartbeat_consumer_enable; // 是否开启驱动器的心跳监测功能，开启后驱动器会监测是否有心跳帧数据，如果超过一定时间没有收到心跳帧数据则认为通信断开了，会切断输出，需要断电重启才能恢复
+
+    float    torque_limit;
+    float    over_temp_drv_level;
+    float    over_temp_motor_level;
+    
     uint16_t in_encoder_offset;
     uint16_t ex_encoder_offset;
     uint16_t firmware_version;

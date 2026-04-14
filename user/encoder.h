@@ -26,6 +26,7 @@ typedef struct{
 
 typedef struct{
     volatile uint16_t enc_degree_raw;      // 原始编码器值
+    volatile uint16_t enc_degree_raw_reversed; // 反转后的原始编码器值
     volatile uint16_t enc_degree_lined;    // 线性化后的编码器值
     volatile int32_t enc_turns;            // 编码器端累加圈数
     volatile int32_t enc_velocity_q14;     // 编码器端速度 (rad/s)

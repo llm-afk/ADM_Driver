@@ -35,11 +35,6 @@ typedef enum {
 #define CW_CMD_ERROR_RESET                  0xFF
 #define CW_CMD_DEV_ENCODER_CALIB            0xF1
 
-#define MOTOR_TEMP_MAX        150  // 1¡ã
-#define MOTOR_TEMP_RECOVER    90   // 1¡ã
-#define BOARD_TEMP_MAX        85   // 1¡ã
-#define BOARD_TEMP_RECOVER    60   // 1¡ã
-
 typedef struct {
     motor_mode_t state;   // ¿ØÖÆÄ£Ê½×´Ì¬
 

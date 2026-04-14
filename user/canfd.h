@@ -30,6 +30,8 @@
 #define GET_MSG_ID(canid)   (canid & 0x780) // 获取 11bit 中高 4bit 的msg_id
 #define GET_NODE_ID(canid)  (canid & 0x07F) // 获取 11bit 中低 7bit 的node_id
 
+#define MSG_ID_HEARTBEAT    0x700
+
 #define MSG_ID_SDO_SRV      0x580
 #define MSG_ID_SDO_CLI      0x600
 
@@ -59,7 +61,6 @@ typedef struct {
 
 extern uint16_t canfd_frame_flag; // 用于指示当前是否有收到canfd帧数据 0-有 1-没有
 extern uint16_t canfd_timeout_cnt; // 100hz记录没有canfd帧数据的时候累加值
-extern uint16_t canfd_first_flag;
 extern uint16_t canfd_buf_off_flag;
 
 extern uint16_t m_node_id;

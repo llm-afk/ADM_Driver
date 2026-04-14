@@ -30,6 +30,7 @@ void jump_to_bootloader(void)
  * @brief 逐个8字节的接收新固件的bin文件，攒满一个扇区擦除写入
  * @param data 新固件的8字节小包的首地址
  */
+#pragma CODE_SECTION(write_iap_data, "ramfuncs");
 void write_iap_data(uint16_t *data)
 {
     if((addr_offset + 4) < DOWNLOAD_SIZE)

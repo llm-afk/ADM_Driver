@@ -94,7 +94,8 @@ void MC_servo_loop(void)
                             + (int32_t)((((int64_t)motor_ctrl.Kd_q14 * velocity_err_q14) >> 14) * MOTOR_RATED_CUR * 1.41421356f / 40960) \
                             + motor_ctrl.torque_ref_q14; 
 
-            out_q14 = CLAMP(out_q14, -491520, 491520); // 30 * 16384
+            ODObjs.torque_limit = CLAMP(ODObjs.torque_limit, 0.0f, 30.0f); // 限制OD中torque_limit的范围，避免用户设置过大导致电流环输出过大烧坏电机
+            out_q14 = CLAMP(out_q14, (int32_t)(ODObjs.torque_limit * -16384.0f), (int32_t)(ODObjs.torque_limit * 16384.0f)); // 30 * 16384
             
             Iq = Torque_To_Iq(-out_q14 / 16384.0f) * 40960 / (MOTOR_RATED_CUR * 1.41421356f); 
             Id = 0;
@@ -117,6 +118,7 @@ void MC_servo_loop(void)
             if(encoder_calibrate() == 1)
             {
                 motor_ctrl.state = MIT;
+                ResetDSP();
             }
             break;
         }
@@ -178,6 +180,8 @@ float motor_temp;
 #define R25   10000.0f
 #define BETA  3445.0f
 
+extern uint16_t heatbeat_flag;
+
 /**
  * @brief 采集电机控制相关数据
  * @note 放在stimer框架下100hz循环执行
@@ -218,63 +222,69 @@ void info_collect_loop(void)
     /* -------- 保护逻辑 -------- */
     if(!(ODObjs.error_code & ERR_OVER_TEMP_MOTOR))
     {
-        if(motor_temp > MOTOR_TEMP_MAX)
+        if(motor_temp > ODObjs.over_temp_motor_level)
         {
             set_err(ERR_OVER_TEMP_MOTOR);
             motor_ctrl.state = SOFT_STOP;
         }
     }
-    else if(motor_temp < MOTOR_TEMP_RECOVER)
-    {
-        clr_err(ERR_OVER_TEMP_MOTOR);
-    }
 
     if(!(ODObjs.error_code & ERR_OVER_TEMP_DRV))
     {
-        if(board_temp > BOARD_TEMP_MAX)
+        if(board_temp > ODObjs.over_temp_drv_level)
         {
             set_err(ERR_OVER_TEMP_DRV);
             motor_ctrl.state = SOFT_STOP;
         }
     }
-    else if(board_temp < BOARD_TEMP_RECOVER)
-    {
-        clr_err(ERR_OVER_TEMP_DRV);
-    }
 
-    // 判断can_phy连通性
-    canfd_timeout_cnt++;
-    if(canfd_first_flag == 0)
+    static uint16_t cnt = 0; // 上电10s后开始检测canfd通信状态和can_bus_off状态，避免上电瞬间没有canfd通信导致误报警
+    if(cnt < 1000)
     {
-        if(canfd_timeout_cnt > 1000) // 跳过开始的10s
-        {
-            canfd_timeout_cnt = 0;
-            canfd_first_flag = 1;
-        }
+        cnt++;
     }
     else
     {
-        if(canfd_timeout_cnt > 100) // canfd通信断开1s报警
+        // 判断can_phy连通性
+        if(ODObjs.heartbeat_consumer_enable) // 只有开启了心跳监测功能才进行canfd通信状态的判断
         {
-            canfd_timeout_cnt = 0;
-            canfd_frame_flag = 1;
+            canfd_timeout_cnt++;
+            if(canfd_timeout_cnt > 250) // 2.5s没有canfd通信了，认为can_phy断开了
+            {
+                canfd_frame_flag = 1;
+                motor_ctrl.state = SOFT_STOP;
+            }
+            else
+            {
+                canfd_frame_flag = 0;
+            }
         }
-    }
 
-    // 判断can_bus_off
-    static uint16_t can_buf_off_cnt = 0;
-    if(CanfdRegs.CFG_STAT.bit.BUSOFF) // 如果检测到canfd总线关闭
-    {
-        can_buf_off_cnt++;
-        if(can_buf_off_cnt > 100) 
+        // 判断can_bus_off
+        static uint16_t can_buf_off_cnt = 0;
+        if(CanfdRegs.CFG_STAT.bit.BUSOFF) // 如果检测到canfd总线关闭
+        {
+            can_buf_off_cnt++;
+            if(can_buf_off_cnt > 100) 
+            {
+                can_buf_off_cnt = 0;
+                canfd_buf_off_flag = 1;
+                motor_ctrl.state = SOFT_STOP;
+            }
+        }
+        else
         {
             can_buf_off_cnt = 0;
-            canfd_buf_off_flag = 1;
+            canfd_buf_off_flag = 0;
         }
     }
-    else
+
+    // 生成1hz的心跳帧发送标志
+    static uint16_t heartbeat_cnt = 0;
+    heartbeat_cnt++;
+    if(heartbeat_cnt >= 100) 
     {
-        can_buf_off_cnt = 0;
-        canfd_buf_off_flag = 0;
+        heartbeat_cnt = 0;
+        heatbeat_flag = 1; 
     }
 }

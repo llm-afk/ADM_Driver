@@ -70,26 +70,27 @@ void encoder_init(void)
 #pragma CODE_SECTION(encoder_loop,"ramfuncs");
 void encoder_loop(void)
 {
+    encoder.enc_degree_raw = get_pri_enc_val();
     // 更新主编码器和副编码器角度并修正方向
     if(encoder_config.encoder_reverse)
     {
-        encoder.enc_degree_raw = 16383 - get_pri_enc_val();
+        encoder.enc_degree_raw_reversed = 16383 - encoder.enc_degree_raw;
         encoder.ex_enc_degree_raw = 16383 - get_sec_enc_val();
     }
     else
     {
-        encoder.enc_degree_raw = get_pri_enc_val();
+        encoder.enc_degree_raw_reversed = encoder.enc_degree_raw;
         encoder.ex_enc_degree_raw = get_sec_enc_val();
     }
 
     // 时刻更新主编码器值和副编码器值为了应对编码器标零时需要读取当前的角度值
-    ODObjs.in_encoder_offset = encoder.enc_degree_raw;
+    ODObjs.in_encoder_offset = encoder.enc_degree_raw_reversed;
     ODObjs.ex_encoder_offset = encoder.ex_enc_degree_raw;
 
     // 线性补偿
     {
         // 1. 获取当前原始的绝对角度 (0 ~ 16383)
-        uint16_t raw_deg = encoder.enc_degree_raw;
+        uint16_t raw_deg = encoder.enc_degree_raw_reversed;
 
         // 2. 计算在 512 点表格中的索引
         // 16384 / 512 = 32 (相当于右移 5 位)
@@ -144,7 +145,7 @@ void encoder_loop(void)
 
 // 计算速度
     {
-        #define VEL_WINDOW_BITS      5
+        #define VEL_WINDOW_BITS      3
         #define VEL_WINDOW_SIZE      (1 << VEL_WINDOW_BITS)
 
         #define VEL_ALPHA_MIN_Q8     1    
@@ -191,7 +192,7 @@ void encoder_loop(void)
 
         // 4.2 对 alpha_target 本身做低通滤波 (系数 >> 4 约等于 1/16 的时间常数)
         // 这样即使 active_error 突变，alpha_target 也会平滑地滑动到目标值
-        alpha_target_smooth_q8 += (alpha_instant - alpha_target_smooth_q8) >> 6;
+        alpha_target_smooth_q8 += (alpha_instant - alpha_target_smooth_q8) >> 4;
 
         // 5. 非对称 Alpha 更新：基于平滑后的目标值进行快攻慢放
         if(alpha_target_smooth_q8 > vel_alpha_q8) {
@@ -209,6 +210,7 @@ void encoder_loop(void)
         // 7. 输出
         encoder.enc_velocity_q14 = velocity_temp_q14;
     }
+
     
     // 更新电角度
     if(motor_ctrl.state == MIT)
@@ -276,7 +278,7 @@ uint16_t encoder_calibrate(void)
                 else if(degree_dif < -ENCODER_CPR_DIV) degree_dif += ENCODER_CPR;
 
                 // 确立电角度与机械角度的方向映射关系
-                if(degree_dif > 0) 
+                if(degree_dif < 0) 
                 {
                     encoder_config.encoder_reverse = 0;
                     mech_dir = 1;  // 电角度正转 -> 机械角度增加
@@ -300,7 +302,7 @@ uint16_t encoder_calibrate(void)
             {
                 cnt = 0;
                 state = 3;
-                encoder_config.elec_degree_calib = (encoder.enc_degree_raw & 0x7FF);
+                encoder_config.elec_degree_calib = (encoder.enc_degree_raw_reversed & 0x7FF);
             }
             break;
         }
@@ -311,7 +313,7 @@ uint16_t encoder_calibrate(void)
             
             if(cnt == 1)
             {
-                first_raw_val = encoder.enc_degree_raw;
+                first_raw_val = encoder.enc_degree_raw_reversed;
             }
             
             if(cnt <= 4096)
@@ -327,7 +329,7 @@ uint16_t encoder_calibrate(void)
                     ideal_pos = ideal_pos & (ENCODER_CPR - 1); 
                     
                     // 2. 计算误差 = 实际绝对位置 - 理想绝对位置
-                    int16_t error = (int16_t)encoder.enc_degree_raw - (int16_t)ideal_pos;
+                    int16_t error = (int16_t)encoder.enc_degree_raw_reversed - (int16_t)ideal_pos;
                     
                     // 3. 对微小误差进行最短路径处理 (如果误差>8192，说明跨越了0点)
                     if(error > ENCODER_CPR_DIV) error -= ENCODER_CPR;
@@ -369,7 +371,7 @@ uint16_t encoder_calibrate(void)
             
             if(cnt == 1)
             {
-                first_raw_val = encoder.enc_degree_raw;
+                first_raw_val = encoder.enc_degree_raw_reversed;
             }
             
             if(cnt <= 4096)
@@ -385,7 +387,7 @@ uint16_t encoder_calibrate(void)
                     ideal_pos = ideal_pos & (ENCODER_CPR - 1);
                     
                     // 2. 误差 = 实际位置 - 理想位置
-                    int16_t error = (int16_t)encoder.enc_degree_raw - (int16_t)ideal_pos;
+                    int16_t error = (int16_t)encoder.enc_degree_raw_reversed - (int16_t)ideal_pos;
                     
                     // 3. 误差最短路径处理
                     if(error > ENCODER_CPR_DIV) error -= ENCODER_CPR;

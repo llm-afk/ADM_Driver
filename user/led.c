@@ -10,22 +10,25 @@ const lpg_seg_t led_id_3_dis[] = {{12,1},{16,0},{12,1},{16,0},{12,1},{16,0},{120
 const lpg_seg_t led_id_4_dis[] = {{12,1},{16,0},{12,1},{16,0},{12,1},{16,0},{12,1},{16,0},{120,0}};
 
 // 电机使能状态下的led_id闪烁
-const lpg_seg_t led_id_1_en[] = {{12,1},{16,0},{60,0},{4,1},{5,0},{4,1},{5,0},{50,0}};
-const lpg_seg_t led_id_2_en[] = {{12,1},{16,0},{12,1},{16,0},{60,0},{4,1},{5,0},{4,1},{5,0},{50,0}};
-const lpg_seg_t led_id_3_en[] = {{12,1},{16,0},{12,1},{16,0},{12,1},{16,0},{60,0},{4,1},{5,0},{4,1},{5,0},{50,0}};
-const lpg_seg_t led_id_4_en[] = {{12,1},{16,0},{12,1},{16,0},{12,1},{16,0},{12,1},{16,0},{60,0}, {4,1},{5,0},{4,1},{5,0},{50,0}};
+const lpg_seg_t led_id_1_en[] = {{12,1},{16,0},{30,0},{4,1},{5,0},{4,1},{5,0},{120,0}};
+const lpg_seg_t led_id_2_en[] = {{12,1},{16,0},{12,1},{16,0},{30,0},{4,1},{5,0},{4,1},{5,0},{120,0}};
+const lpg_seg_t led_id_3_en[] = {{12,1},{16,0},{12,1},{16,0},{12,1},{16,0},{30,0},{4,1},{5,0},{4,1},{5,0},{120,0}};
+const lpg_seg_t led_id_4_en[] = {{12,1},{16,0},{12,1},{16,0},{12,1},{16,0},{12,1},{16,0},{30,0},{4,1},{5,0},{4,1},{5,0},{120,0}};
 
-const lpg_seg_t error_temp[]        = {{4,1},{5,0},{120,0}};
-const lpg_seg_t error_can_phy_off[] = {{4,1},{5,0},{4,1},{5,0},{120,0}};
-const lpg_seg_t error_can_bus_off[] = {{4,1},{5,0},{4,1},{5,0},{4,1},{5,0},{120,0}};
+// 错误状态指示
+const lpg_seg_t led_err_can_phy_off[]      = {{4,1},{5,0},{4,1},{5,0},{120,0}};
+const lpg_seg_t led_err_drv_over_temp[]    = {{4,1},{5,0},{4,1},{5,0},{30,0},{4,1},{5,0},{120,0}};
+const lpg_seg_t led_err_motor_over_temp[]  = {{4,1},{5,0},{4,1},{5,0},{30,0},{4,1},{5,0},{4,1},{5,0},{120,0}};
+const lpg_seg_t led_err_can_bus_off[]      = {{4,1},{5,0},{4,1},{5,0},{4,1},{5,0},{120,0}};
 
 typedef enum{
     LED_OFF,
     LED_ON,
     LED_ID_BLINK,
-    LED_ERR,
-    LED_ERR_CAN_PHY_OFF,
-    LED_ERR_CAN_BUS_OFF,
+    LED_ERR_CAN_PHY_OFF,        // 物理断线导致通信中断                    优先级 0 优先级最高
+    LED_ERR_DRV_OVER_TEMP,      // 驱动器过温                             优先级 1
+    LED_ERR_MOTOR_OVER_TEMP,    // 电机过温                               优先级 2
+    LED_ERR_CAN_BUS_OFF,        // 关节自身CANFD外设Bus-Off,主动挂出总线   优先级 3
 }led_state_t;
 
 led_state_t led_state = LED_OFF;
@@ -63,52 +66,73 @@ void led_init(void)
  */
 void led_loop(void)
 {
-    static int RunSignal_last = 0;
-    if(ODObjs.error_code)
+    static uint16_t cnt = 0;
+    static uint16_t RunSignal_last = 0;
+
+    if(cnt <= 1000)
     {
-        led_state = LED_ERR;
-        if(led_state != led_state_last)
-        {
-            lpg_set_pattern(&lpg.units[0], error_temp, ARRAY_SIZE(error_temp));
-        }
-    }
-    else if(canfd_frame_flag)
-    {
-        led_state = LED_ERR_CAN_PHY_OFF;
-        if(led_state != led_state_last)
-        {
-            lpg_set_pattern(&lpg.units[0], error_can_phy_off, ARRAY_SIZE(error_can_phy_off));
-        }
-    }
-    else if(canfd_buf_off_flag)
-    {
-        led_state = LED_ERR_CAN_BUS_OFF;
-        if(led_state != led_state_last)
-        {
-            lpg_set_pattern(&lpg.units[0], error_can_bus_off, ARRAY_SIZE(error_can_bus_off));
-        }
-    }
-    else 
-    {
+        cnt++;
         led_state = LED_ID_BLINK;
         if((led_state != led_state_last) || (RunSignal != RunSignal_last))
         {
             switch(ODObjs.node_id)
             {
-                case 1:
-                    RunSignal ? lpg_set_pattern(&lpg.units[0], led_id_1_en, ARRAY_SIZE(led_id_1_en)) : lpg_set_pattern(&lpg.units[0], led_id_1_dis, ARRAY_SIZE(led_id_1_dis));
-                    break;
-                case 2:
-                    RunSignal ? lpg_set_pattern(&lpg.units[0], led_id_2_en, ARRAY_SIZE(led_id_2_en)) : lpg_set_pattern(&lpg.units[0], led_id_2_dis, ARRAY_SIZE(led_id_2_dis));
-                    break;
-                case 3:
-                    RunSignal ? lpg_set_pattern(&lpg.units[0], led_id_3_en, ARRAY_SIZE(led_id_3_en)) : lpg_set_pattern(&lpg.units[0], led_id_3_dis, ARRAY_SIZE(led_id_3_dis));
-                    break;
-                case 4:
-                    RunSignal ? lpg_set_pattern(&lpg.units[0], led_id_4_en, ARRAY_SIZE(led_id_4_en)) : lpg_set_pattern(&lpg.units[0], led_id_4_dis, ARRAY_SIZE(led_id_4_dis));
-                    break;
-                default:
-                    break;
+                case 1: RunSignal ? lpg_set_pattern(&lpg.units[0], led_id_1_en, ARRAY_SIZE(led_id_1_en)) : lpg_set_pattern(&lpg.units[0], led_id_1_dis, ARRAY_SIZE(led_id_1_dis)); break;
+                case 2: RunSignal ? lpg_set_pattern(&lpg.units[0], led_id_2_en, ARRAY_SIZE(led_id_2_en)) : lpg_set_pattern(&lpg.units[0], led_id_2_dis, ARRAY_SIZE(led_id_2_dis)); break;
+                case 3: RunSignal ? lpg_set_pattern(&lpg.units[0], led_id_3_en, ARRAY_SIZE(led_id_3_en)) : lpg_set_pattern(&lpg.units[0], led_id_3_dis, ARRAY_SIZE(led_id_3_dis)); break;
+                case 4: RunSignal ? lpg_set_pattern(&lpg.units[0], led_id_4_en, ARRAY_SIZE(led_id_4_en)) : lpg_set_pattern(&lpg.units[0], led_id_4_dis, ARRAY_SIZE(led_id_4_dis)); break;
+                default:break;;
+            }
+        }
+    }
+    else
+    {
+        // 错误优先级 断线 > 驱动器过温 > 电机过温 > can_bus_off
+        if(canfd_frame_flag)
+        {
+            led_state = LED_ERR_CAN_PHY_OFF;
+            if(led_state != led_state_last)
+            {
+                lpg_set_pattern(&lpg.units[0], led_err_can_phy_off, ARRAY_SIZE(led_err_can_phy_off));
+            }
+        }
+        else if(ODObjs.error_code & ERR_OVER_TEMP_DRV)
+        {
+            led_state = LED_ERR_DRV_OVER_TEMP;
+            if(led_state != led_state_last)
+            {
+                lpg_set_pattern(&lpg.units[0], led_err_drv_over_temp, ARRAY_SIZE(led_err_drv_over_temp));
+            }
+        }
+        else if(ODObjs.error_code & ERR_OVER_TEMP_MOTOR)
+        {
+            led_state = LED_ERR_MOTOR_OVER_TEMP;
+            if(led_state != led_state_last)
+            {
+                lpg_set_pattern(&lpg.units[0], led_err_motor_over_temp, ARRAY_SIZE(led_err_motor_over_temp));
+            }
+        }
+        else if(canfd_buf_off_flag)
+        {
+            led_state = LED_ERR_CAN_BUS_OFF;
+            if(led_state != led_state_last)
+            {
+                lpg_set_pattern(&lpg.units[0], led_err_can_bus_off, ARRAY_SIZE(led_err_can_bus_off));
+            }
+        }
+        else
+        {
+            led_state = LED_ID_BLINK;
+            if((led_state != led_state_last) || (RunSignal != RunSignal_last))
+            {
+                switch(ODObjs.node_id)
+                {
+                    case 1: RunSignal ? lpg_set_pattern(&lpg.units[0], led_id_1_en, ARRAY_SIZE(led_id_1_en)) : lpg_set_pattern(&lpg.units[0], led_id_1_dis, ARRAY_SIZE(led_id_1_dis)); break;
+                    case 2: RunSignal ? lpg_set_pattern(&lpg.units[0], led_id_2_en, ARRAY_SIZE(led_id_2_en)) : lpg_set_pattern(&lpg.units[0], led_id_2_dis, ARRAY_SIZE(led_id_2_dis)); break;
+                    case 3: RunSignal ? lpg_set_pattern(&lpg.units[0], led_id_3_en, ARRAY_SIZE(led_id_3_en)) : lpg_set_pattern(&lpg.units[0], led_id_3_dis, ARRAY_SIZE(led_id_3_dis)); break;
+                    case 4: RunSignal ? lpg_set_pattern(&lpg.units[0], led_id_4_en, ARRAY_SIZE(led_id_4_en)) : lpg_set_pattern(&lpg.units[0], led_id_4_dis, ARRAY_SIZE(led_id_4_dis)); break;
+                    default:break;;
+                }
             }
         }
     }
