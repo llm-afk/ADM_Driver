@@ -1780,10 +1780,10 @@ int32_t get_rand_num_from_seed(int32_t seed, int32_t num)
 Median7Filter_t mf7_M = {0};
 Median7Filter_t mf7_T = {0};
 
-uint16_t d_kp = 380;
-uint16_t d_ki = 240;
-uint16_t q_kp = 380;
-uint16_t q_ki = 240;
+uint16_t d_kp = 390;
+uint16_t d_ki = 250;
+uint16_t q_kp = 390;
+uint16_t q_ki = 250;
 
 #pragma CODE_SECTION(MotorControlISR, "ramfuncs");
 void MotorControlISR()
@@ -1835,7 +1835,7 @@ void MotorControlISR()
             flag = 1;
         }
     }
-    gPWM.gPWMPrdApply = 2597 - ((m_node_id - 1) * 67) + rand_num;
+    gPWM.gPWMPrdApply = 2467 - ((m_node_id % 5) * 67) + rand_num;
 
     if (gMainCmd.Command.bit.Start == TRUE)
     {

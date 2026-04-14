@@ -256,12 +256,16 @@ void info_collect_loop(void)
             }
             else
             {
+                if(motor_ctrl.state == SOFT_STOP && canfd_frame_flag == 1)
+                {
+                    motor_ctrl.state = MIT;
+                }
                 canfd_frame_flag = 0;
             }
         }
 
         // 判断can_bus_off
-        static uint16_t can_buf_off_cnt = 0;
+        static uint32_t can_buf_off_cnt = 0;
         if(CanfdRegs.CFG_STAT.bit.BUSOFF) // 如果检测到canfd总线关闭
         {
             can_buf_off_cnt++;
@@ -274,6 +278,10 @@ void info_collect_loop(void)
         }
         else
         {
+            if(motor_ctrl.state == SOFT_STOP && canfd_buf_off_flag == 1)
+            {
+                motor_ctrl.state = MIT;
+            }
             can_buf_off_cnt = 0;
             canfd_buf_off_flag = 0;
         }

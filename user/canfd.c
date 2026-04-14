@@ -334,7 +334,7 @@ static void parse_frame(canFrame_t *frame)
 }
 
 uint16_t canfd_frame_flag = 0; // 用于指示当前是否有收到canfd帧数据 0-有 1-没有
-uint16_t canfd_timeout_cnt = 0; // 100hz记录没有canfd帧数据的时候累加值
+uint32_t canfd_timeout_cnt = 0; // 100hz记录没有canfd帧数据的时候累加值
 uint16_t canfd_buf_off_flag = 0; // can_bus_off标志位 0-正常 1-关闭
 uint16_t heatbeat_flag = 0; // 心跳标志位 0-未发送 1-已发送
 
