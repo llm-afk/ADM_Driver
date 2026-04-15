@@ -77,6 +77,7 @@ interrupt void ZeroOfEPWMISR(void)
     // 电流环计算
     EPwm2Regs.ETCLR.bit.INT = 1;
     EINT;
+    encoder_loop();
     ADCOverInterrupt();
     DINT;
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP3; // Acknowledge this interrupt
@@ -88,8 +89,6 @@ interrupt void ZeroOfEPWMISR(void)
         stimer_main_cnt = 0;
         stimer_heartBeat(&stimer_main); // 2Khz的心跳频率
     }
-
-    encoder_loop();
 
     #if(DEBUG == 1)
     static uint16_t cnt = 0;
