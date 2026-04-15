@@ -256,7 +256,7 @@ void info_collect_loop(void)
             }
             else
             {
-                if(motor_ctrl.state == SOFT_STOP && canfd_frame_flag == 1)
+                if(motor_ctrl.state == STOPPED && canfd_frame_flag == 1)
                 {
                     motor_ctrl.state = MIT;
                 }
@@ -278,7 +278,7 @@ void info_collect_loop(void)
         }
         else
         {
-            if(motor_ctrl.state == SOFT_STOP && canfd_buf_off_flag == 1)
+            if(motor_ctrl.state == STOPPED && canfd_buf_off_flag == 1)
             {
                 motor_ctrl.state = MIT;
             }
