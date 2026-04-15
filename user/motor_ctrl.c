@@ -258,6 +258,7 @@ void info_collect_loop(void)
             {
                 if(motor_ctrl.state == STOPPED && canfd_frame_flag == 1)
                 {
+                    EnableDrive();
                     motor_ctrl.state = MIT;
                 }
                 canfd_frame_flag = 0;
@@ -280,6 +281,7 @@ void info_collect_loop(void)
         {
             if(motor_ctrl.state == STOPPED && canfd_buf_off_flag == 1)
             {
+                EnableDrive();
                 motor_ctrl.state = MIT;
             }
             can_buf_off_cnt = 0;
