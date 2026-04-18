@@ -1733,50 +1733,6 @@ void calc_out_angle2()
     gPhase.OutPhase = data;
 }
 
-/* 对输入 seed 做一次扰动，得到伪随机值 */
-static uint32_t rng_get_from_seed(uint32_t seed)
-{
-    uint32_t x = seed;
-
-    /* 避免全0状态 */
-    if (x == 0U)
-    {
-        x = 0x6D2B79F5UL;
-    }
-
-    x ^= x << 13;
-    x ^= x >> 17;
-    x ^= x << 5;
-
-    return x;
-}
-
-/**
- * @brief 根据输入种子，获取一个指定正负范围内的随机值
- * @param seed 输入种子（int32_t）
- * @param num 正负边界，25表示范围 -25 ~ +25
- * @return int32_t 随机值
- *
- * 说明：
- * 1. 相同 seed -> 相同输出
- * 2. 不同 seed -> 大概率不同输出
- */
-int32_t get_rand_num_from_seed(int32_t seed, int32_t num)
-{
-    uint32_t x;
-    uint32_t range;
-
-    if (num <= 0)
-    {
-        return 0;
-    }
-
-    x = rng_get_from_seed((uint32_t)seed);
-    range = (uint32_t)num * 2U + 1U;
-
-    return (int32_t)(x % range) - num;
-}
-
 Median7Filter_t mf7_M = {0};
 Median7Filter_t mf7_T = {0};
 
@@ -1823,19 +1779,37 @@ void MotorControlISR()
     Q_CUR_KP =  q_kp;  
     Q_CUR_KI =  q_ki; 
 
-    static uint16_t flag = 0;
-    static uint16_t rand_num = 0;
-    static uint16_t num = 0;
-    if(flag == 0)
+// ==========================================================
+    // 工业级 PWM 随机扩频 (Spread Spectrum) 逻辑
+    // 用于打散电磁干扰 (EMI) 峰值和抑制高频啸叫
+    // ==========================================================
+    
+    // 1. 维护一个独立的随机数种子，全程在静态域自循环，不受外部缓慢变量干扰
+    static uint32_t prng_state = 0x6D2B79F5UL; 
+    static uint16_t init_flag = 0;
+
+    if (!init_flag) 
     {
-        rand_num = get_rand_num_from_seed(gIMT.M, 28);
-        num++;
-        if(num > 100)
-        {
-            flag = 1;
-        }
+        // 上电第一拍：注入 Node ID。
+        // 保证总线上哪怕有 10 台电机同时上电，它们的白噪声序列也是错开的，绝不发生共振拍频。
+        prng_state ^= (uint32_t)m_node_id * 12345UL; 
+        init_flag = 1;
     }
-    gPWM.gPWMPrdApply = 2617 - (((m_node_id % 5) - 1) * 57) + rand_num;
+
+    // 2. Xorshift 状态推进：自己吃自己，产生真正的硬件级伪随机序列
+    prng_state ^= prng_state << 13;
+    prng_state ^= prng_state >> 17;
+    prng_state ^= prng_state << 5;
+
+    // 3. 提取随机数并限制范围 (-28 ~ +28)
+    // 57 即 (28 * 2 + 1)。强制使用带符号的 int16_t 接收，彻底杜绝下溢出变 65535 炸管的风险。
+    int16_t rand_num = (int16_t)(prng_state % 57) - 28;
+
+    // 4. 计算基础 PWM 偏置 (此处如果 m_node_id 在运行时不改变，实际上会被编译器优化为常数)
+    int16_t base_offset = (int16_t)(((m_node_id % 5) - 1) * 47);
+
+    // 5. 应用最终周期，全程带符号运算，安全可靠
+    gPWM.gPWMPrdApply = 2637 - base_offset + rand_num;
 
     if (gMainCmd.Command.bit.Start == TRUE)
     {

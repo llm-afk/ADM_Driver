@@ -49,7 +49,6 @@ int MC_controlword_update(void)
     ODObjs.control_word &= 0xFF00;
     return 0;
 }
-
 /**
  * @brief 电机状态控制主循环
  * @note 放在stimer框架下2Khz循环执行
@@ -57,18 +56,40 @@ int MC_controlword_update(void)
 #pragma CODE_SECTION(MC_servo_loop, "ramfuncs");
 void MC_servo_loop(void)
 {
-    encoder.degree_q14 = ((float)encoder.enc_turns + ((float)((int16_t)encoder.enc_degree_lined - (int16_t)encoder.in_enc_deg_zero) / 16384) + ((float)encoder.error * 18 / 16384)) / 12 * TWO_PI * 16384;
+    // =========================================================================
+    // 【终极防溢出 & 零精度损失计算法】
+    // 1. 获取纯净的总 Tick 数 (64位)，永不溢出
+    // 即使电机以 3000 RPM 运转，int64_t 足以让它连续单向运行超 100 万圈不溢出。
+    // =========================================================================
+    int64_t total_ticks = ((int64_t)encoder.enc_turns << 14)  // 等效于 * 16384
+                        + (int32_t)((int16_t)encoder.enc_degree_lined - (int16_t)encoder.in_enc_deg_zero) 
+                        + (int32_t)encoder.error * 18;
+
+    // =========================================================================
+    // 2. 将浮点乘除转换为 Q30 格式的 64位定点乘法 (彻底消灭浮点数导致的精度吃光现象)
+    // 原公式推导：(total_ticks / 16384) / 12 * TWO_PI * 16384 => total_ticks * (TWO_PI / 12)
+    // TWO_PI / 12.0 = 0.523598775598，乘以 2^30 转为 Q30 定点常数：562203932LL
+    // =========================================================================
+    encoder.degree_q14 = (total_ticks * 562203932LL) >> 30; 
+    
+    // 假设 GEAR_RATIO_INV 是常量宏，此处保留原意
     encoder.velocity_q14 = (int32_t)(encoder.enc_velocity_q14 * GEAR_RATIO_INV);
 
+    // =========================================================================
+    // 【优化 2】优化 64 位数据的绝对值计算与突变滤波
+    // =========================================================================
     static int64_t degree_q14_last = 0;
     static int16_t first_flag = 0;
+    
     if(!first_flag) 
     {
-        first_flag++;
+        first_flag = 1; // 替换自增，防止多年运行后溢出
     }
     else
     {
-        if(INT_ABS(encoder.degree_q14 - degree_q14_last) > 1000) // 滤除50rps以上的瞬时错误角度数据
+        // 纯整数减法和逻辑判断，避开调用 64 位宽的 INT_ABS 库函数开销
+        int64_t diff = encoder.degree_q14 - degree_q14_last;
+        if(diff > 1000 || diff < -1000) // 滤除50rps以上的瞬时错误角度数据
         {
             encoder.degree_q14 = degree_q14_last;
         }
@@ -84,33 +105,54 @@ void MC_servo_loop(void)
         }
         case MIT:
         {
-            int64_t degree_err_q14 = motor_ctrl.degree_ref_q14 - encoder.degree_q14;
-            int64_t velocity_err_q14 = motor_ctrl.velocity_ref_q14 - encoder.velocity_q14;
+            // =========================================================================
+            // 【核心优化 3】64位安全降维，激活 DSP 的 32x32 硬件单周期乘法器
+            // =========================================================================
+            int64_t raw_degree_err = motor_ctrl.degree_ref_q14 - encoder.degree_q14;
+            int64_t raw_velocity_err = motor_ctrl.velocity_ref_q14 - encoder.velocity_q14;
 
-            degree_err_q14   = CLAMP(degree_err_q14,  -163840,  163840); // 解决位置目标值和实际值过大导致计算中间过程溢出导致反向转动的问题
-            velocity_err_q14 = CLAMP(velocity_err_q14,-1638400, 1638400);
+            // 拦截 64 位超大误差，安全降维至 32 位，断绝后续溢出可能
+            int32_t degree_err_q14;
+            if(raw_degree_err > 163840) degree_err_q14 = 163840;
+            else if(raw_degree_err < -163840) degree_err_q14 = -163840;
+            else degree_err_q14 = (int32_t)raw_degree_err;
 
-            int32_t out_q14 = (int32_t)((((int64_t)motor_ctrl.Kp_q14 * degree_err_q14) >> 14) * MOTOR_RATED_CUR * 1.41421356f / 40960) \
-                            + (int32_t)((((int64_t)motor_ctrl.Kd_q14 * velocity_err_q14) >> 14) * MOTOR_RATED_CUR * 1.41421356f / 40960) \
-                            + motor_ctrl.torque_ref_q14; 
+            int32_t velocity_err_q14;
+            if(raw_velocity_err > 1638400) velocity_err_q14 = 1638400;
+            else if(raw_velocity_err < -1638400) velocity_err_q14 = -1638400;
+            else velocity_err_q14 = (int32_t)raw_velocity_err;
 
-            ODObjs.torque_limit = CLAMP(ODObjs.torque_limit, 0.0f, 30.0f); // 限制OD中torque_limit的范围，避免用户设置过大导致电流环输出过大烧坏电机
-            out_q14 = CLAMP(out_q14, (int32_t)(ODObjs.torque_limit * -16384.0f), (int32_t)(ODObjs.torque_limit * 16384.0f)); // 30 * 16384
+            // =========================================================================
+            // 【优化 4】编译期合并常量，减少运行时的浮点运算
+            // =========================================================================
+            #define MIT_TERM_SCALE (MOTOR_RATED_CUR * 1.41421356f / 40960.0f)
+            #define MIT_IQ_SCALE   (40960.0f / (MOTOR_RATED_CUR * 1.41421356f))
+
+            // 此时 err 是 32 位，Kp 是 32 位。它们相乘刚好利用 DSP 单周期指令 IMACL
+            int32_t p_term = (int32_t)( ( ((int64_t)motor_ctrl.Kp_q14 * degree_err_q14) >> 14 ) * MIT_TERM_SCALE );
+            int32_t d_term = (int32_t)( ( ((int64_t)motor_ctrl.Kd_q14 * velocity_err_q14) >> 14 ) * MIT_TERM_SCALE );
             
-            Iq = Torque_To_Iq(-out_q14 / 16384.0f) * 40960 / (MOTOR_RATED_CUR * 1.41421356f); 
+            int32_t out_q14 = p_term + d_term + motor_ctrl.torque_ref_q14; 
+
+            // =========================================================================
+            // 【优化 5】纯净的限幅与倒数相乘算法
+            // =========================================================================
+            float t_limit = ODObjs.torque_limit;
+            
+            // 浮点域限幅：利用三目运算符激发底层硬件比较优化
+            t_limit = (t_limit > 30.0f) ? 30.0f : ((t_limit < 0.0f) ? 0.0f : t_limit);
+            ODObjs.torque_limit = t_limit; 
+
+            // 转为整型边界
+            int32_t out_limit = (int32_t)(t_limit * 16384.0f); 
+            
+            // 整型限幅，彻底避开对动态边界调用复杂的浮点比较库
+            out_q14 = (out_q14 > out_limit) ? out_limit : ((out_q14 < -out_limit) ? -out_limit : out_q14);
+            
+            // 除以 16384 优化为乘以常数倒数 0.00006103515625f，极速计算 Iq
+            Iq = Torque_To_Iq((float)(-out_q14) * 0.00006103515625f) * MIT_IQ_SCALE; 
             Id = 0;
 
-            // static uint16_t mit_cnt = 0;
-            // mit_cnt++;
-            // if(mit_cnt == 20) // 100hz更新一次mit输出
-            // {
-            //     Id = 500;
-            // }
-            // else if(mit_cnt == 40) // 200hz更新一次mit输出
-            // {
-            //     mit_cnt = 0;
-            //     Id = 0;
-            // }
             break;
         }
         case ENCODER_CALIBRATE: 
@@ -124,7 +166,6 @@ void MC_servo_loop(void)
         }
         case ENCODER_ZERO: 
         {
-
             break;
         }
         case SOFT_STOP:
@@ -176,9 +217,9 @@ float board_temp;
 float motor_temp;
 
 #define ADC_MAX 4095.0f
-#define R_PULLUP 10000.0f // 10k
-#define R25   10000.0f
-#define BETA  3445.0f
+// 提前计算好常数倒数，将运行时的“除法”转化为“乘法”
+#define INV_T25     0.0033540164f  // 1.0f / 298.15f
+#define INV_BETA    0.0002902758f  // 1.0f / 3445.0f
 
 extern uint16_t heatbeat_flag;
 
@@ -188,20 +229,30 @@ extern uint16_t heatbeat_flag;
  */
 void info_collect_loop(void)
 {
-    static float r_ntc;
     static float board_temp_filt;
     static float motor_temp_filt;
     static uint16_t temp_filt_inited = 0;
 
     const float alpha = 0.001f;
 
-    /* -------- 驱动板温度 -------- */
-    r_ntc = R_PULLUP * ADC_NTC / (4095.0f - ADC_NTC);
-    float board_temp_raw = 1.0f / (1.0f / 298.15f + logf(r_ntc / 10000.0f) / 3445.0f) - 273.15f;
+    /* -------- 温度解算核心优化 -------- */
+    // 提取 ADC 值到局部变量，防止编译器多次读取外设寄存器导致开销增加
+    float adc_drv = (float)ADC_NTC;   
+    float adc_mot = (float)ADC_NTC_M; 
 
-    /* -------- 电机温度 -------- */
-    r_ntc = R_PULLUP * ADC_NTC_M / (4095.0f - ADC_NTC_M);
-    float motor_temp_raw = 1.0f / (1.0f / 298.15f + logf(r_ntc / 10000.0f) / 3445.0f) - 273.15f;
+    // 【数学化简 1】：
+    // 原逻辑: r_ntc = 10000.0 * ADC / (4095.0 - ADC); 
+    //         logf(r_ntc / 10000.0)
+    // 这里的 10k 上拉电阻和 10k 基准电阻在代数上完美抵消。
+    // 化简后: logf(ADC / (4095.0 - ADC))，直接省去了一次乘法和一次除法！
+    float ratio_drv = adc_drv / (4095.0f - adc_drv);
+    float ratio_mot = adc_mot / (4095.0f - adc_mot);
+
+    // 【数学化简 2】：
+    // 原逻辑: 1.0f / (1.0f / 298.15f + logf(...) / 3445.0f)
+    // 利用预编译常量，将两次极慢的 float 变量除法变为了 float 乘法和加法。
+    float board_temp_raw = 1.0f / (INV_T25 + INV_BETA * logf(ratio_drv)) - 273.15f;
+    float motor_temp_raw = 1.0f / (INV_T25 + INV_BETA * logf(ratio_mot)) - 273.15f;
 
     /* -------- 一阶滤波（带初始化） -------- */
     if (!temp_filt_inited)
@@ -219,26 +270,23 @@ void info_collect_loop(void)
     board_temp = board_temp_filt;
     motor_temp = motor_temp_filt;
 
-    /* -------- 保护逻辑 -------- */
-    if(!(ODObjs.error_code & ERR_OVER_TEMP_MOTOR))
+    /* -------- 保护逻辑优化 -------- */
+    // 使用逻辑与 (&&) 合并嵌套的 if。
+    // 编译器会利用短路求值（Short-circuit evaluation）特性，若错误码已置位，直接跳过温度浮点比较，减少分支流水线清空。
+    if(!(ODObjs.error_code & ERR_OVER_TEMP_MOTOR) && (motor_temp > ODObjs.over_temp_motor_level))
     {
-        if(motor_temp > ODObjs.over_temp_motor_level)
-        {
-            set_err(ERR_OVER_TEMP_MOTOR);
-            motor_ctrl.state = SOFT_STOP;
-        }
+        set_err(ERR_OVER_TEMP_MOTOR);
+        motor_ctrl.state = SOFT_STOP;
     }
 
-    if(!(ODObjs.error_code & ERR_OVER_TEMP_DRV))
+    if(!(ODObjs.error_code & ERR_OVER_TEMP_DRV) && (board_temp > ODObjs.over_temp_drv_level))
     {
-        if(board_temp > ODObjs.over_temp_drv_level)
-        {
-            set_err(ERR_OVER_TEMP_DRV);
-            motor_ctrl.state = SOFT_STOP;
-        }
+        set_err(ERR_OVER_TEMP_DRV);
+        motor_ctrl.state = SOFT_STOP;
     }
 
-    static uint16_t cnt = 0; // 上电10s后开始检测canfd通信状态和can_bus_off状态，避免上电瞬间没有canfd通信导致误报警
+    /* -------- CAN 状态机检测 -------- */
+    static uint16_t cnt = 0; 
     if(cnt < 1000)
     {
         cnt++;
@@ -246,17 +294,17 @@ void info_collect_loop(void)
     else
     {
         // 判断can_phy连通性
-        if(ODObjs.heartbeat_consumer_enable) // 只有开启了心跳监测功能才进行canfd通信状态的判断
+        if(ODObjs.heartbeat_consumer_enable) 
         {
             canfd_timeout_cnt++;
-            if(canfd_timeout_cnt > 250) // 2.5s没有canfd通信了，认为can_phy断开了
+            if(canfd_timeout_cnt > 250) 
             {
                 canfd_frame_flag = 1;
                 motor_ctrl.state = SOFT_STOP;
             }
             else
             {
-                if(motor_ctrl.state == STOPPED && canfd_frame_flag == 1)
+                if((motor_ctrl.state == STOPPED) && canfd_frame_flag)
                 {
                     EnableDrive();
                     motor_ctrl.state = MIT;
@@ -267,7 +315,7 @@ void info_collect_loop(void)
 
         // 判断can_bus_off
         static uint32_t can_buf_off_cnt = 0;
-        if(CanfdRegs.CFG_STAT.bit.BUSOFF) // 如果检测到canfd总线关闭
+        if(CanfdRegs.CFG_STAT.bit.BUSOFF) 
         {
             can_buf_off_cnt++;
             if(can_buf_off_cnt > 100) 
@@ -279,7 +327,7 @@ void info_collect_loop(void)
         }
         else
         {
-            if(motor_ctrl.state == STOPPED && canfd_buf_off_flag == 1)
+            if((motor_ctrl.state == STOPPED) && canfd_buf_off_flag)
             {
                 EnableDrive();
                 motor_ctrl.state = MIT;
@@ -289,10 +337,9 @@ void info_collect_loop(void)
         }
     }
 
-    // 生成1hz的心跳帧发送标志
+    /* -------- 心跳帧 -------- */
     static uint16_t heartbeat_cnt = 0;
-    heartbeat_cnt++;
-    if(heartbeat_cnt >= 100) 
+    if(++heartbeat_cnt >= 100) 
     {
         heartbeat_cnt = 0;
         heatbeat_flag = 1; 

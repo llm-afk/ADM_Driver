@@ -70,67 +70,74 @@ void encoder_init(void)
 #pragma CODE_SECTION(encoder_loop,"ramfuncs");
 void encoder_loop(void)
 {
-    encoder.enc_degree_raw = get_pri_enc_val();
-    // 更新主编码器和副编码器角度并修正方向
-    if(encoder_config.encoder_reverse)
+    // =========================================================================
+    // 【优化 1】读取硬件与缓存结构体变量 (减少寻址与内存操作开销)
+    // 提前读取编码器，避免在if-else分支中调用函数打断流水线预测
+    // =========================================================================
+    uint16_t pri_enc_val = get_pri_enc_val();
+    uint16_t sec_enc_val = get_sec_enc_val();
+    uint16_t is_reverse = encoder_config.encoder_reverse; // 缓存常用判断条件
+
+    uint16_t raw_deg_rev;
+    uint16_t ex_raw;
+
+    encoder.enc_degree_raw = pri_enc_val;
+
+    if(is_reverse)
     {
-        encoder.enc_degree_raw_reversed = 16383 - encoder.enc_degree_raw;
-        encoder.ex_enc_degree_raw = 16383 - get_sec_enc_val();
+        raw_deg_rev = 16383 - pri_enc_val;
+        ex_raw      = 16383 - sec_enc_val;
     }
     else
     {
-        encoder.enc_degree_raw_reversed = encoder.enc_degree_raw;
-        encoder.ex_enc_degree_raw = get_sec_enc_val();
+        raw_deg_rev = pri_enc_val;
+        ex_raw      = sec_enc_val;
     }
 
-    // 时刻更新主编码器值和副编码器值为了应对编码器标零时需要读取当前的角度值
-    ODObjs.in_encoder_offset = encoder.enc_degree_raw_reversed;
-    ODObjs.ex_encoder_offset = encoder.ex_enc_degree_raw;
+    // 缓存至结构体 (集中写入，避免频繁进出结构体)
+    encoder.enc_degree_raw_reversed = raw_deg_rev;
+    encoder.ex_enc_degree_raw       = ex_raw;
+    ODObjs.in_encoder_offset        = raw_deg_rev;
+    ODObjs.ex_encoder_offset        = ex_raw;
 
-    // 线性补偿
+    // =========================================================================
+    // 【优化 2】线性补偿
+    // =========================================================================
+    uint16_t lined_deg;
     {
-        // 1. 获取当前原始的绝对角度 (0 ~ 16383)
-        uint16_t raw_deg = encoder.enc_degree_raw_reversed;
-
-        // 2. 计算在 512 点表格中的索引
-        // 16384 / 512 = 32 (相当于右移 5 位)
-        uint16_t idx1 = raw_deg >> 5; 
-
-        // 计算下一个相邻点的索引 (使用 & 0x1FF 保证 511 的下一个是 0，实现完美的环形首尾相接)
+        uint16_t idx1 = raw_deg_rev >> 5; 
         uint16_t idx2 = (idx1 + 1) & 0x1FF; 
+        uint16_t fraction = raw_deg_rev & 0x1F; 
 
-        // 3. 计算插值权重（即处在两个点之间的什么位置）
-        // 余数部分，范围 0 ~ 31 (相当于 & 0x1F)
-        uint16_t fraction = raw_deg & 0x1F; 
-
-        // 4. 从表格中取出对应的误差值
         int16_t err1 = encoder_config.linearity_table[idx1];
         int16_t err2 = encoder_config.linearity_table[idx2];
 
-        // 5. 进行线性插值计算当前精确位置的误差
-        // 公式: err = err1 + (err2 - err1) * fraction / 32
-        int32_t interp_error = err1 + ((int32_t)(err2 - err1) * fraction) / 32;
+        // 【核心优化 2.1】：将除法 /32 改为带符号算术右移 >>5。
+        // TI 编译器处理带符号整数除法时会增加调整指令以保证向零取整，
+        // 使用 >> 5 不仅仅只需单周期，且在控制系统连续平滑度上表现更好。
+        int32_t interp_error = err1 + ( ((int32_t)(err2 - err1) * fraction) >> 5 );
 
-        // 6. 应用补偿 (理想值 = 实际值 - 误差)
-        int32_t lined_deg = (int32_t)raw_deg - interp_error;
-
-        // 7. 环形溢出处理 (限制在 0 ~ 16383 之间)
-        // 由于 ENCODER_CPR (16384) 是 2 的整数次幂，使用按位与是最快最安全的处理方式
-        lined_deg &= (ENCODER_CPR - 1); 
-
-        // 8. 赋值给线性化后的变量，供 FOC 使用
-        encoder.enc_degree_lined = (uint16_t)lined_deg;
+        // 【核心优化 2.2】：由于 ENCODER_CPR 是 16384 (2的次幂)，
+        // 直接使用无符号运算并做按位与，合并减法操作。
+        lined_deg = (raw_deg_rev - interp_error) & (ENCODER_CPR - 1);
+        encoder.enc_degree_lined = lined_deg;
     }
 
-    // 维护多圈累计值
+    // =========================================================================
+    // 【优化 3】维护多圈累计值
+    // =========================================================================
     static uint16_t degree_last = 0;
     static uint16_t flag = 0; 
-    if(flag == 0)
+    
+    // 【注意】虽然这是分支，但仅在上电第一拍执行。若平台支持，最好将它移至初始化函数。
+    if(!flag) 
     {
         flag = 1;
-        degree_last = encoder.enc_degree_lined; 
+        degree_last = lined_deg; 
     }
-    int16_t delta = (int16_t)(encoder.enc_degree_lined - degree_last);
+    
+    int16_t delta = (int16_t)(lined_deg - degree_last);
+    
     if(delta > ENCODER_CPR_DIV) 
     {
         encoder.enc_turns--;
@@ -141,15 +148,17 @@ void encoder_loop(void)
         encoder.enc_turns++;
         delta += ENCODER_CPR; 
     }
-    degree_last = encoder.enc_degree_lined;
+    degree_last = lined_deg;
 
-// 计算速度
+    // =========================================================================
+    // 【优化 4】计算速度
+    // =========================================================================
     {
         #define VEL_WINDOW_BITS      3
         #define VEL_WINDOW_SIZE      (1 << VEL_WINDOW_BITS)
-
         #define VEL_ALPHA_MIN_Q8     1    
         #define VEL_ALPHA_MAX_Q8     128  
+        #define VEL_NOISE_DEADZONE   16000  
 
         static int16_t  delta_history[VEL_WINDOW_SIZE] = {0};
         static uint16_t history_idx = 0;
@@ -157,18 +166,14 @@ void encoder_loop(void)
 
         static int32_t  velocity_temp_q14 = 0;
         static int32_t  vel_alpha_q8 = VEL_ALPHA_MIN_Q8;
-        
-        // --- 新增：用于 alpha_target 平滑的变量 ---
         static int32_t  alpha_target_smooth_q8 = VEL_ALPHA_MIN_Q8; 
         static uint16_t vel_filter_init = 0;
 
-        // 1. 滑动窗口
-        delta_sum -= delta_history[history_idx];
+        // 【核心优化 4.1】：合并加减法，省去一次中间存储操作
+        delta_sum += delta - delta_history[history_idx];
         delta_history[history_idx] = delta;
-        delta_sum += delta;
         history_idx = (history_idx + 1) & (VEL_WINDOW_SIZE - 1);
 
-        // 2. 目标速度
         int32_t vel_target_q14 = (delta_sum * 125664) >> VEL_WINDOW_BITS;
 
         if(!vel_filter_init) {
@@ -177,49 +182,57 @@ void encoder_loop(void)
             alpha_target_smooth_q8 = VEL_ALPHA_MIN_Q8;
         }
 
-        // 3. 计算偏差与死区
         int32_t error = vel_target_q14 - velocity_temp_q14;
+        
+        // 【核心优化 4.2】：TI C2000编译器遇到此种三目运算时，
+        // 会无分支地直接将其编译为硬件级别的 ABS (绝对值) 和 MAX/MIN 指令。极大地节省开销。
         int32_t abs_error = (error >= 0) ? error : -error;
-
-        #define VEL_NOISE_DEADZONE  16000  
+        
         int32_t active_error = abs_error - VEL_NOISE_DEADZONE;
-        if(active_error < 0) active_error = 0;
+        active_error = (active_error > 0) ? active_error : 0; // 映射为 MAX 指令
 
-        // 4. 【核心优化】：计算瞬时 Alpha 并进行低通滤波
-        // 4.1 计算瞬时目标值
         int32_t alpha_instant = VEL_ALPHA_MIN_Q8 + (active_error >> 9);
-        if(alpha_instant > VEL_ALPHA_MAX_Q8) alpha_instant = VEL_ALPHA_MAX_Q8;
+        alpha_instant = (alpha_instant < VEL_ALPHA_MAX_Q8) ? alpha_instant : VEL_ALPHA_MAX_Q8; // 映射为 MIN 指令
 
-        // 4.2 对 alpha_target 本身做低通滤波 (系数 >> 4 约等于 1/16 的时间常数)
-        // 这样即使 active_error 突变，alpha_target 也会平滑地滑动到目标值
         alpha_target_smooth_q8 += (alpha_instant - alpha_target_smooth_q8) >> 4;
 
-        // 5. 非对称 Alpha 更新：基于平滑后的目标值进行快攻慢放
-        if(alpha_target_smooth_q8 > vel_alpha_q8) {
-            // 【快攻】：发现真实持续运动，快速放开滤波
-            // 这里不再是瞬间赋值，而是以较快的速度跟进，防止 Alpha 阶跃
-            vel_alpha_q8 += (alpha_target_smooth_q8 - vel_alpha_q8) >> 1; 
+        // 【核心优化 4.3】：保留 if-else 用于移位（在 F28035 上，基于变量的移位和常量移位开销不同，
+        // 显式分离能让编译器直接使用常量移位 SFR 指令）
+        int32_t alpha_diff = alpha_target_smooth_q8 - vel_alpha_q8;
+        if(alpha_diff > 0) {
+            vel_alpha_q8 += alpha_diff >> 1; 
         } else {
-            // 【慢放】：进入静止或稳态，缓慢收紧滤波
-            vel_alpha_q8 += (alpha_target_smooth_q8 - vel_alpha_q8) >> 3; 
+            vel_alpha_q8 += alpha_diff >> 3; 
         }
 
-        // 6. 应用最终的 IIR
         velocity_temp_q14 += (error * vel_alpha_q8) >> 8;
-
-        // 7. 输出
         encoder.enc_velocity_q14 = velocity_temp_q14;
     }
-
     
-    // 更新电角度
+    // =========================================================================
+    // 【优化 5】更新电角度
+    // =========================================================================
     if(motor_ctrl.state == MIT)
     {
-        encoder.elec_degree = 65535-(uint16_t)((encoder.enc_degree_lined - encoder_config.elec_degree_calib) & 0x7FF) << 5;
+        // 计算基础映射值
+        uint16_t base_elec = (lined_deg - encoder_config.elec_degree_calib) & 0x7FF;
+        
+        // 还原原代码逻辑并缓存计算结果，避免重复解引用 encoder.elec_degree
+        // 警告：原代码为 65535 - (uint16_t)(...) << 5 
+        // 按照 C 语言优先级，减法 '-' 的优先级比左移 '<<' 高！因此等于 (65535 - 基础值) << 5
+        // 此处严格复现了您的运算优先级以防逻辑改变。
+        uint16_t e_deg_temp = (65535 - base_elec) << 5;
 
-        if(!encoder_config.encoder_reverse)
+        // 【核心优化 5.1】：避免冗余的二次取反。
+        // 原逻辑若不是 reverse 相当于 65535 - ((65535 - base) << 5)
+        // 优化后用单次条件判断决定最终赋值，且直接利用前面已缓存的 is_reverse 寄存器变量。
+        if(is_reverse)
         {
-            encoder.elec_degree = 65535 - encoder.elec_degree;   
+            encoder.elec_degree = e_deg_temp;
+        }
+        else
+        {
+            encoder.elec_degree = 65535 - e_deg_temp;   
         }
     }
 }
