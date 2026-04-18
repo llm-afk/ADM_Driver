@@ -188,6 +188,8 @@ interrupt void canfd_IsrHander1(void)
                 canFrame_temp.len = CANFD_DLC_TO_LEN(CanfdRegs.RBUF.RIDST.bit.DLC);
                 memcpy(canFrame_temp.data, CanfdRegs.RBUF.DATA, ((canFrame_temp.len + 1) >> 1));
                 ringbuffer_in(&canFrameRxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
+
+                canfd_timeout_cnt = 0; // 收到帧数据，清除canfd通信断开的计数
             }
             CanfdRegs.TCTRL.bit.RREL = 1;
         }
@@ -202,7 +204,6 @@ interrupt void canfd_IsrHander1(void)
 #pragma CODE_SECTION(parse_frame, "ramfuncs");
 static void parse_frame(canFrame_t *frame)
 {
-    canfd_timeout_cnt = 0; // 收到帧数据，清除canfd通信断开的计数
     uint16_t msg_id = GET_MSG_ID(frame->id);
     uint16_t node_id = GET_NODE_ID(frame->id);
     switch(msg_id)
@@ -334,7 +335,7 @@ static void parse_frame(canFrame_t *frame)
 }
 
 uint16_t canfd_frame_flag = 0; // 用于指示当前是否有收到canfd帧数据 0-有 1-没有
-uint32_t canfd_timeout_cnt = 0; // 100hz记录没有canfd帧数据的时候累加值
+volatile uint32_t canfd_timeout_cnt = 0; // 100hz记录没有canfd帧数据的时候累加值
 uint16_t canfd_buf_off_flag = 0; // can_bus_off标志位 0-正常 1-关闭
 uint16_t heatbeat_flag = 0; // 心跳标志位 0-未发送 1-已发送
 
@@ -347,27 +348,15 @@ void can_com_loop(void)
     canFrame_t canFrame_temp = {0};
 
     // RX loop
-    for(uint16_t i = 0; i < 3; i++)
+    if(ringbuffer_used(&canFrameRxRingbuffer) >= sizeof(canFrame_t))
     {
-        if(ringbuffer_used(&canFrameRxRingbuffer) < sizeof(canFrame_t))break;
         ringbuffer_out(&canFrameRxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
         parse_frame(&canFrame_temp);
     }
 
-    // heartbeat producter
-    if(ODObjs.heartbeat_Producer_enable && heatbeat_flag)
-    {
-        canFrame_temp.id = MSG_ID_HEARTBEAT + m_node_id;
-        canFrame_temp.len = 1;
-        canFrame_temp.data[0] = 0x05;
-        enqueue_tx_frame(&canFrame_temp);
-        heatbeat_flag = 0;
-    }
-
     // TX loop
-    for(uint16_t i = 0; i < 3; i++)
+    if(ringbuffer_used(&canFrameTxRingbuffer) >= sizeof(canFrame_t))
     {
-        if(ringbuffer_used(&canFrameTxRingbuffer) < sizeof(canFrame_t))break;
         ringbuffer_out(&canFrameTxRingbuffer, &canFrame_temp, sizeof(canFrame_t));
         sendCanFrame_fifo(&canFrame_temp);
     }
