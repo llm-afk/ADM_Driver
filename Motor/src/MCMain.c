@@ -1835,7 +1835,7 @@ void MotorControlISR()
             flag = 1;
         }
     }
-    gPWM.gPWMPrdApply = 2467 - ((m_node_id % 5) * 67) + rand_num;
+    gPWM.gPWMPrdApply = 2567 - (((m_node_id % 5) - 1) * 67) + rand_num;
 
     if (gMainCmd.Command.bit.Start == TRUE)
     {

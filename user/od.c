@@ -18,7 +18,7 @@ static const OD_entry_t ODList[] =
     
     {0x2040, &ODObjs.node_id,                   1, ATTR_ROM | ATTR_RW, ResetDSP},  
 
-    {0x2043, &ODObjs.heartbeat_Producer_enable,2, ATTR_ROM | ATTR_RW, NULL},
+    {0x2043, &ODObjs.heartbeat_Producer_enable, 2, ATTR_ROM | ATTR_RW, NULL},
     {0x2044, &ODObjs.heartbeat_consumer_enable, 2, ATTR_ROM | ATTR_RW, NULL},
     
     {0x205B, &ODObjs.torque_limit,              4, ATTR_ROM | ATTR_RW, NULL},
@@ -46,7 +46,7 @@ static void dictionary_init(void)
 
     ODObjs.in_encoder_offset = 0;
     ODObjs.ex_encoder_offset = 0;
-    ODObjs.firmware_version = 105; 
+    ODObjs.firmware_version = 106; 
 }
 
 /**

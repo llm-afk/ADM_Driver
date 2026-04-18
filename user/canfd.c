@@ -37,15 +37,15 @@ static inline void canfd_config_filter_low7_dual(uint16_t id)
     CanfdRegs.ACF_0.all = 0xFF80;
     CanfdRegs.ACF_1.all = 0;
 
-    CanfdRegs.ACF_EN.bit.AE_1 = 1; // 使能第1个滤波器
-    CanfdRegs.CIA_ACF_CFG.bit.SELMASK = 0;
-    CanfdRegs.CIA_ACF_CFG.bit.ACFADR = 1; // 使用第0个滤波器
-    CanfdRegs.ACF_0.all = (0 & 0x007F);
-    CanfdRegs.ACF_1.all = 0;
-    CanfdRegs.CIA_ACF_CFG.bit.SELMASK = 1;
-    CanfdRegs.CIA_ACF_CFG.bit.ACFADR = 1;
-    CanfdRegs.ACF_0.all = 0xFF80;
-    CanfdRegs.ACF_1.all = 0;
+    // CanfdRegs.ACF_EN.bit.AE_1 = 1; // 使能第1个滤波器
+    // CanfdRegs.CIA_ACF_CFG.bit.SELMASK = 0;
+    // CanfdRegs.CIA_ACF_CFG.bit.ACFADR = 1; // 使用第0个滤波器
+    // CanfdRegs.ACF_0.all = (0 & 0x007F);
+    // CanfdRegs.ACF_1.all = 0;
+    // CanfdRegs.CIA_ACF_CFG.bit.SELMASK = 1;
+    // CanfdRegs.CIA_ACF_CFG.bit.ACFADR = 1;
+    // CanfdRegs.ACF_0.all = 0xFF80;
+    // CanfdRegs.ACF_1.all = 0;
 }
 
 /**
@@ -372,3 +372,5 @@ void can_com_loop(void)
         sendCanFrame_fifo(&canFrame_temp);
     }
 }
+
+

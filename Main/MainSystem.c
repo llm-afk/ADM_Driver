@@ -51,7 +51,7 @@ void main(void)
 
     EnableDog();
     SetInterruptEnable();      
-    Zero_Len = 110;
+    Zero_Len = 120;
     EINT; //使能全局中断
     ERTM; //使能实时模式
     while(1)
