@@ -133,6 +133,9 @@ void canfd_init(void)
     CanfdRegs.CFG_STAT.bit.TBSEL = 1; // 配置为二级缓冲区
     CanfdRegs.CFG_STAT.bit.TPE = 0;
 
+    CanfdRegs.CFG_STAT.bit.TPSS = 1;
+    CanfdRegs.CFG_STAT.bit.TSSS = 1;
+
     canfd_ringbuffer_init();   
 }
 

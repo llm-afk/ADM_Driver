@@ -1792,7 +1792,7 @@ void MotorControlISR()
     {
         // 上电第一拍：注入 Node ID。
         // 保证总线上哪怕有 10 台电机同时上电，它们的白噪声序列也是错开的，绝不发生共振拍频。
-        prng_state ^= (uint32_t)m_node_id * 12345UL; 
+        prng_state ^= (uint32_t)gIMT.M * 12345UL; 
         init_flag = 1;
     }
 
