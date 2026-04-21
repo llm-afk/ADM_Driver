@@ -70,7 +70,7 @@ void MC_servo_loop(void)
     // 原公式推导：(total_ticks / 16384) / 12 * TWO_PI * 16384 => total_ticks * (TWO_PI / 12)
     // TWO_PI / 12.0 = 0.523598775598，乘以 2^30 转为 Q30 定点常数：562203932LL
     // =========================================================================
-    encoder.degree_q14 = (total_ticks * 562203932LL) >> 30; 
+    encoder.degree_q14 = -(total_ticks * 562203932LL) >> 30; 
     
     // 假设 GEAR_RATIO_INV 是常量宏，此处保留原意
     encoder.velocity_q14 = (int32_t)(encoder.enc_velocity_q14 * GEAR_RATIO_INV);

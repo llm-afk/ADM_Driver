@@ -15,13 +15,16 @@
 
 #define CALIB_TABLE_SIZE        (512) 
 
-#define MAIN_ENCODER_TEETH      (17)   // 主编码器磁铁的齿数
-#define EX_ENCODER_TEETH        (18)   // 副编码器磁铁的齿数
+#define MOTOR_POLE_PAIRS        (10)
+
+#define MAIN_ENCODER_TEETH      (17)   // 主齿
+#define EX_ENCODER_TEETH        (18)   // 副齿
 
 typedef struct{
-    uint16_t elec_degree_calib; // 电角度校准值
-    int16_t linearity_table[CALIB_TABLE_SIZE];  // 线性化补偿表
-    int16_t encoder_reverse; // 编码器方向位
+    uint16_t elec_degree_calib; // 角度校准值
+    int16_t linearity_table[CALIB_TABLE_SIZE];  // 线化
+    int16_t encoder_reverse; // 编码器反向
+    int16_t phase_reverse;   // 电机相序反向
 }encoder_config_t;
 
 typedef struct{
