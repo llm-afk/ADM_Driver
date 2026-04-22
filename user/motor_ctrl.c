@@ -152,7 +152,7 @@ void MC_servo_loop(void)
             // // 除以 16384 优化为乘以常数倒数 0.00006103515625f，极速计算 Iq
             // Iq = Torque_To_Iq((float)(-out_q14) * 0.00006103515625f) * MIT_IQ_SCALE; 
             // Id = 0;
-            Id = 2048;
+            Id = 2948;
 
             break;
         }
@@ -217,6 +217,9 @@ void clr_err(tErrorCode err)
 float board_temp;
 float motor_temp;
 
+#define MOTOR_TEMP_RECOVER 70
+#define BOARD_TEMP_RECOVER 50
+
 #define ADC_MAX 4095.0f
 // 提前计算好常数倒数，将运行时的“除法”转化为“乘法”
 #define INV_T25     0.0033540164f  // 1.0f / 298.15f
@@ -279,7 +282,7 @@ void info_collect_loop(void)
     #define K_WATT_RAW_Q30        21097LL
 
     // 加热时间常数 Q16: alpha = 0.005 (约 2 秒响应)
-    #define ALPHA_HEAT_Q16        328
+    #define ALPHA_HEAT_Q16        300
 
     // 冷却时间常数 Q16: alpha = 0.00125 (约 8 秒响应，防止突降的关键)
     // 电机停转后散热慢，调小此值可让温度下降更平滑
@@ -340,11 +343,29 @@ void info_collect_loop(void)
         set_err(ERR_OVER_TEMP_MOTOR);
         motor_ctrl.state = SOFT_STOP;
     }
+    if(ODObjs.error_code & ERR_OVER_TEMP_MOTOR)
+    {
+        if(motor_temp < MOTOR_TEMP_RECOVER)
+        {
+            clr_err(ERR_OVER_TEMP_MOTOR);
+            EnableDrive();
+            motor_ctrl.state = INIT;
+        }
+    }
 
     if(!(ODObjs.error_code & ERR_OVER_TEMP_DRV) && (board_temp > ODObjs.over_temp_drv_level))
     {
         set_err(ERR_OVER_TEMP_DRV);
         motor_ctrl.state = SOFT_STOP;
+    }
+    if(ODObjs.error_code & ERR_OVER_TEMP_DRV)
+    {
+        if(board_temp < BOARD_TEMP_RECOVER)
+        {
+            clr_err(ERR_OVER_TEMP_DRV);
+            EnableDrive();
+            motor_ctrl.state = INIT;
+        }
     }
 
     /* -------- CAN 状态机检测 -------- */
