@@ -62,15 +62,15 @@ void MC_servo_loop(void)
     // 即使电机以 3000 RPM 运转，int64_t 足以让它连续单向运行超 100 万圈不溢出。
     // =========================================================================
     int64_t total_ticks = ((int64_t)encoder.enc_turns << 14)  // 等效于 * 16384
-                        + (int32_t)((int16_t)encoder.enc_degree_lined - (int16_t)encoder.in_enc_deg_zero) 
-                        + (int32_t)encoder.error * 18;
+                        + (int32_t)((int16_t)encoder.enc_degree_lined + (int16_t)encoder.in_enc_deg_zero)
+                        - (int32_t)encoder.error * 18;
 
     // =========================================================================
     // 2. 将浮点乘除转换为 Q30 格式的 64位定点乘法 (彻底消灭浮点数导致的精度吃光现象)
     // 原公式推导：(total_ticks / 16384) / 12 * TWO_PI * 16384 => total_ticks * (TWO_PI / 12)
     // TWO_PI / 12.0 = 0.523598775598，乘以 2^30 转为 Q30 定点常数：562203932LL
     // =========================================================================
-    encoder.degree_q14 = -(total_ticks * 562203932LL) >> 30; 
+    encoder.degree_q14 = (-(total_ticks * 562203932LL) >> 30) + 8565;
     
     // 假设 GEAR_RATIO_INV 是常量宏，此处保留原意
     encoder.velocity_q14 = (int32_t)(encoder.enc_velocity_q14 * GEAR_RATIO_INV);
