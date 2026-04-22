@@ -105,53 +105,54 @@ void MC_servo_loop(void)
         }
         case MIT:
         {
-            // =========================================================================
-            // 【核心优化 3】64位安全降维，激活 DSP 的 32x32 硬件单周期乘法器
-            // =========================================================================
-            int64_t raw_degree_err = motor_ctrl.degree_ref_q14 - encoder.degree_q14;
-            int64_t raw_velocity_err = motor_ctrl.velocity_ref_q14 - encoder.velocity_q14;
+            // // =========================================================================
+            // // 【核心优化 3】64位安全降维，激活 DSP 的 32x32 硬件单周期乘法器
+            // // =========================================================================
+            // int64_t raw_degree_err = motor_ctrl.degree_ref_q14 - encoder.degree_q14;
+            // int64_t raw_velocity_err = motor_ctrl.velocity_ref_q14 - encoder.velocity_q14;
 
-            // 拦截 64 位超大误差，安全降维至 32 位，断绝后续溢出可能
-            int32_t degree_err_q14;
-            if(raw_degree_err > 163840) degree_err_q14 = 163840;
-            else if(raw_degree_err < -163840) degree_err_q14 = -163840;
-            else degree_err_q14 = (int32_t)raw_degree_err;
+            // // 拦截 64 位超大误差，安全降维至 32 位，断绝后续溢出可能
+            // int32_t degree_err_q14;
+            // if(raw_degree_err > 163840) degree_err_q14 = 163840;
+            // else if(raw_degree_err < -163840) degree_err_q14 = -163840;
+            // else degree_err_q14 = (int32_t)raw_degree_err;
 
-            int32_t velocity_err_q14;
-            if(raw_velocity_err > 1638400) velocity_err_q14 = 1638400;
-            else if(raw_velocity_err < -1638400) velocity_err_q14 = -1638400;
-            else velocity_err_q14 = (int32_t)raw_velocity_err;
+            // int32_t velocity_err_q14;
+            // if(raw_velocity_err > 1638400) velocity_err_q14 = 1638400;
+            // else if(raw_velocity_err < -1638400) velocity_err_q14 = -1638400;
+            // else velocity_err_q14 = (int32_t)raw_velocity_err;
 
-            // =========================================================================
-            // 【优化 4】编译期合并常量，减少运行时的浮点运算
-            // =========================================================================
-            #define MIT_TERM_SCALE (MOTOR_RATED_CUR * 1.41421356f / 40960.0f)
-            #define MIT_IQ_SCALE   (40960.0f / (MOTOR_RATED_CUR * 1.41421356f))
+            // // =========================================================================
+            // // 【优化 4】编译期合并常量，减少运行时的浮点运算
+            // // =========================================================================
+            // #define MIT_TERM_SCALE (MOTOR_RATED_CUR * 1.41421356f / 40960.0f)
+            // #define MIT_IQ_SCALE   (40960.0f / (MOTOR_RATED_CUR * 1.41421356f))
 
-            // 此时 err 是 32 位，Kp 是 32 位。它们相乘刚好利用 DSP 单周期指令 IMACL
-            int32_t p_term = (int32_t)( ( ((int64_t)motor_ctrl.Kp_q14 * degree_err_q14) >> 14 ) * MIT_TERM_SCALE );
-            int32_t d_term = (int32_t)( ( ((int64_t)motor_ctrl.Kd_q14 * velocity_err_q14) >> 14 ) * MIT_TERM_SCALE );
+            // // 此时 err 是 32 位，Kp 是 32 位。它们相乘刚好利用 DSP 单周期指令 IMACL
+            // int32_t p_term = (int32_t)( ( ((int64_t)motor_ctrl.Kp_q14 * degree_err_q14) >> 14 ) * MIT_TERM_SCALE );
+            // int32_t d_term = (int32_t)( ( ((int64_t)motor_ctrl.Kd_q14 * velocity_err_q14) >> 14 ) * MIT_TERM_SCALE );
             
-            int32_t out_q14 = p_term + d_term + motor_ctrl.torque_ref_q14; 
+            // int32_t out_q14 = p_term + d_term + motor_ctrl.torque_ref_q14; 
 
-            // =========================================================================
-            // 【优化 5】纯净的限幅与倒数相乘算法
-            // =========================================================================
-            float t_limit = ODObjs.torque_limit;
+            // // =========================================================================
+            // // 【优化 5】纯净的限幅与倒数相乘算法
+            // // =========================================================================
+            // float t_limit = ODObjs.torque_limit;
             
-            // 浮点域限幅：利用三目运算符激发底层硬件比较优化
-            t_limit = (t_limit > 30.0f) ? 30.0f : ((t_limit < 0.0f) ? 0.0f : t_limit);
-            ODObjs.torque_limit = t_limit; 
+            // // 浮点域限幅：利用三目运算符激发底层硬件比较优化
+            // t_limit = (t_limit > 30.0f) ? 30.0f : ((t_limit < 0.0f) ? 0.0f : t_limit);
+            // ODObjs.torque_limit = t_limit; 
 
-            // 转为整型边界
-            int32_t out_limit = (int32_t)(t_limit * 16384.0f); 
+            // // 转为整型边界
+            // int32_t out_limit = (int32_t)(t_limit * 16384.0f); 
             
-            // 整型限幅，彻底避开对动态边界调用复杂的浮点比较库
-            out_q14 = (out_q14 > out_limit) ? out_limit : ((out_q14 < -out_limit) ? -out_limit : out_q14);
+            // // 整型限幅，彻底避开对动态边界调用复杂的浮点比较库
+            // out_q14 = (out_q14 > out_limit) ? out_limit : ((out_q14 < -out_limit) ? -out_limit : out_q14);
             
-            // 除以 16384 优化为乘以常数倒数 0.00006103515625f，极速计算 Iq
-            Iq = Torque_To_Iq((float)(-out_q14) * 0.00006103515625f) * MIT_IQ_SCALE; 
-            Id = 0;
+            // // 除以 16384 优化为乘以常数倒数 0.00006103515625f，极速计算 Iq
+            // Iq = Torque_To_Iq((float)(-out_q14) * 0.00006103515625f) * MIT_IQ_SCALE; 
+            // Id = 0;
+            Id = 2048;
 
             break;
         }
@@ -268,7 +269,68 @@ void info_collect_loop(void)
     }
 
     board_temp = board_temp_filt;
-    motor_temp = motor_temp_filt;
+    //motor_temp = motor_temp_filt;
+
+    /* -------- 1. 预编译常数 (建议放在文件头或配置区) -------- */
+    // 额定电流平方: 874^2 = 763876
+    #define I_NOMINAL_RAW_SQ      763876L
+
+    // 热阻增益 Q30: 0.000019648 * 2^30 = 21097
+    #define K_WATT_RAW_Q30        21097LL
+
+    // 加热时间常数 Q16: alpha = 0.005 (约 2 秒响应)
+    #define ALPHA_HEAT_Q16        328
+
+    // 冷却时间常数 Q16: alpha = 0.00125 (约 8 秒响应，防止突降的关键)
+    // 电机停转后散热慢，调小此值可让温度下降更平滑
+    #define ALPHA_COOL_Q16        82
+
+    // 定点转浮点系数: 1 / 65536
+    #define Q16_TO_FLOAT          0.0000152588f
+
+
+    /* -------- 2. 静态变量 (需在函数外定义，保持生命周期) -------- */
+    static int32_t v_temp_acc_Q16 = 0; 
+
+
+    /* -------- 3. 运行时计算 (100Hz 循环体内部) -------- */
+
+    // [步骤 A] 计算当前功率余量
+    // 计算电流模平方 (Q0)
+    int32_t raw_i_sq = (int32_t)gIMT.M * gIMT.M + (int32_t)gIMT.T * gIMT.T;
+
+    // 计算过载余量，若小于额定则余量为 0
+    int32_t overload_raw_sq = raw_i_sq - I_NOMINAL_RAW_SQ;
+    if (overload_raw_sq < 0) 
+    {
+        overload_raw_sq = 0; 
+    }
+
+    // [步骤 B] 计算稳态目标温升 (Q16)
+    // 即使电流瞬时变为 0，target 也只是变为 0，不会直接改变累加器
+    int32_t target_temp_Q16 = (int32_t)(((int64_t)overload_raw_sq * K_WATT_RAW_Q30) >> 14);
+
+    // [步骤 C] 非对称一阶滤波 (EMA)
+    // 根据 目标值 vs 当前值 判断是处于“加热”还是“冷却”状态
+    int16_t active_alpha = (target_temp_Q16 >= v_temp_acc_Q16) ? ALPHA_HEAT_Q16 : ALPHA_COOL_Q16;
+
+    // 计算偏差
+    int32_t temp_diff = target_temp_Q16 - v_temp_acc_Q16;
+
+    // 更新累加器：Acc = Acc + (Diff * Alpha) / 65536
+    // 这里的 +32768 是为了实现四舍五入，防止定点数计算在接近 0 时出现停滞
+    v_temp_acc_Q16 += (temp_diff * (int32_t)active_alpha + 32768) >> 16;
+
+    // 下限钳位
+    if (v_temp_acc_Q16 < 0) 
+    {
+        v_temp_acc_Q16 = 0; 
+    }
+
+    // [步骤 D] 结果融合
+    // 将 Q16 转换为浮点温升，并叠加到 NTC 实测滤波值上
+    float virtual_temp_rise = (float)v_temp_acc_Q16 * Q16_TO_FLOAT;
+    motor_temp = motor_temp_filt + virtual_temp_rise;
 
     /* -------- 保护逻辑优化 -------- */
     // 使用逻辑与 (&&) 合并嵌套的 if。
