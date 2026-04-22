@@ -53,7 +53,7 @@ void encoder_init(void)
     }
 
     // ¼ÆËãÉÏµçÊ±¿ÌË«±àÂëÆ÷Îó²î
-    encoder.error = encoder.enc_error - encoder.enc_error_conf;
+    encoder.error = encoder.enc_error + encoder.enc_error_conf;
     if(encoder.error > ENCODER_CPR_DIV) 
     {
         encoder.error -= ENCODER_CPR; 
