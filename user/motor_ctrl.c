@@ -275,13 +275,13 @@ void info_collect_loop(void)
 
     /* -------- 1. 预编译常数 (建议放在文件头或配置区) -------- */
     // 额定电流平方: 874^2 = 763876
-    #define I_NOMINAL_RAW_SQ      763876L
+    #define I_NOMINAL_RAW_SQ      1229881L
 
     // 热阻增益 Q30: 0.000019648 * 2^30 = 21097
     #define K_WATT_RAW_Q30        21097LL
 
     // 加热时间常数 Q16: alpha = 0.005 (约 2 秒响应)
-    #define ALPHA_HEAT_Q16        300
+    #define ALPHA_HEAT_Q16        328
 
     // 冷却时间常数 Q16: alpha = 0.00125 (约 8 秒响应，防止突降的关键)
     // 电机停转后散热慢，调小此值可让温度下降更平滑
