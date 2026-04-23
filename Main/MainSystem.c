@@ -16,7 +16,7 @@
 
 stimer_t stimer_main;
 
-#define DEBUG 0
+#define DEBUG 1
 #if(DEBUG == 1)
 int16_t debug_buffer_1[2048] = {0};
 int16_t debug_buffer_2[2048] = {0};
@@ -94,7 +94,7 @@ interrupt void ZeroOfEPWMISR(void)
 
     #if(DEBUG == 1)
     static uint16_t cnt = 0;
-    //debug_buffer_1[cnt] = gIMT.T;
+    debug_buffer_1[cnt] = encoder.enc_degree_raw;
     //debug_buffer_2[cnt] = 4 + (abs_error >> 9) ;
 
     cnt++;

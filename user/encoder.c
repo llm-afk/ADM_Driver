@@ -63,6 +63,11 @@ void encoder_init(void)
     }
 }
 
+Median7Filter_t main_enc_filt = {0};
+Median7Filter_t ex_enc_filt = {0};
+extern float board_temp;
+extern float motor_temp;
+
 /**
  * @brief 编码器数据更新循环
  * @note 在电角度的 20kHz 中断中执行
@@ -77,6 +82,13 @@ void encoder_loop(void)
     uint16_t pri_enc_val = get_pri_enc_val();
     uint16_t sec_enc_val = get_sec_enc_val();
     uint16_t is_reverse = encoder_config.encoder_reverse; // 缓存常用判断条件
+
+    if(board_temp > 60.0f || motor_temp > 80.0f) 
+    {
+        pri_enc_val = Filter_Median7(pri_enc_val, &main_enc_filt);
+        sec_enc_val = Filter_Median7(sec_enc_val, &ex_enc_filt);
+    }
+
 
     uint16_t raw_deg_rev;
     uint16_t ex_raw;
