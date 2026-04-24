@@ -33,7 +33,7 @@ void encoder_init(void)
     uint16_t ex_enc_temp = get_sec_enc_val();
 
     // ·­×ª´¦Àí
-    if(!encoder_config.encoder_reverse)
+    if(encoder_config.encoder_reverse)
     {
         enc_temp = 16383 - enc_temp;
         ex_enc_temp = 16383 - ex_enc_temp;
