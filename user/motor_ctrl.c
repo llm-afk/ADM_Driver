@@ -271,66 +271,7 @@ void info_collect_loop(void)
     }
 
     board_temp = board_temp_filt;
-    /* -------- 1. 预编译常数 (建议放在文件头或配置区) -------- */
-    // 额定电流平方: 874^2 = 763876
-    #define I_NOMINAL_RAW_SQ      1229881L // 约13A的电流阈值
-
-    // 热阻增益 Q30: 0.000019648 * 2^30 = 21097
-    #define K_WATT_RAW_Q30        21097LL
-
-    // 加热时间常数 Q16: alpha = 0.005 (约 2 秒响应)
-    #define ALPHA_HEAT_Q16        328
-
-    // 冷却时间常数 Q16: alpha = 0.00125 (约 8 秒响应，防止突降的关键)
-    // 电机停转后散热慢，调小此值可让温度下降更平滑
-    #define ALPHA_COOL_Q16        82
-
-    // 定点转浮点系数: 1 / 65536
-    #define Q16_TO_FLOAT          0.0000152588f
-
-
-    /* -------- 2. 静态变量 (需在函数外定义，保持生命周期) -------- */
-    static int32_t v_temp_acc_Q16 = 0; 
-
-
-    /* -------- 3. 运行时计算 (100Hz 循环体内部) -------- */
-
-    // [步骤 A] 计算当前功率余量
-    // 计算电流模平方 (Q0)
-    int32_t raw_i_sq = (int32_t)gIMT.M * gIMT.M + (int32_t)gIMT.T * gIMT.T;
-
-    // 计算过载余量，若小于额定则余量为 0
-    int32_t overload_raw_sq = raw_i_sq - I_NOMINAL_RAW_SQ;
-    if (overload_raw_sq < 0) 
-    {
-        overload_raw_sq = 0; 
-    }
-
-    // [步骤 B] 计算稳态目标温升 (Q16)
-    // 即使电流瞬时变为 0，target 也只是变为 0，不会直接改变累加器
-    int32_t target_temp_Q16 = (int32_t)(((int64_t)overload_raw_sq * K_WATT_RAW_Q30) >> 14);
-
-    // [步骤 C] 非对称一阶滤波 (EMA)
-    // 根据 目标值 vs 当前值 判断是处于“加热”还是“冷却”状态
-    int16_t active_alpha = (target_temp_Q16 >= v_temp_acc_Q16) ? ALPHA_HEAT_Q16 : ALPHA_COOL_Q16;
-
-    // 计算偏差
-    int32_t temp_diff = target_temp_Q16 - v_temp_acc_Q16;
-
-    // 更新累加器：Acc = Acc + (Diff * Alpha) / 65536
-    // 这里的 +32768 是为了实现四舍五入，防止定点数计算在接近 0 时出现停滞
-    v_temp_acc_Q16 += (temp_diff * (int32_t)active_alpha + 32768) >> 16;
-
-    // 下限钳位
-    if (v_temp_acc_Q16 < 0) 
-    {
-        v_temp_acc_Q16 = 0; 
-    }
-
-    // [步骤 D] 结果融合
-    // 将 Q16 转换为浮点温升，并叠加到 NTC 实测滤波值上
-    float virtual_temp_rise = (float)v_temp_acc_Q16 * Q16_TO_FLOAT;
-    motor_temp = motor_temp_filt + virtual_temp_rise;
+    motor_temp = motor_temp_filt;
 
     /* -------- 保护逻辑优化 -------- */
     // 使用逻辑与 (&&) 合并嵌套的 if。
