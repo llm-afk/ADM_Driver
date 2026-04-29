@@ -380,14 +380,15 @@ void info_collect_loop(void)
             if(canfd_timeout_cnt > 250) 
             {
                 canfd_frame_flag = 1;
-                motor_ctrl.state = SOFT_STOP;
+                RunSignal = 0;
+                motor_ctrl.state = STOPPED;
             }
             else
             {
                 if((motor_ctrl.state == STOPPED) && canfd_frame_flag)
                 {
-                    EnableDrive();
-                    motor_ctrl.state = MIT;
+                    //RunSignal = 1;
+                    motor_ctrl.state = INIT;
                 }
                 canfd_frame_flag = 0;
             }
@@ -402,15 +403,16 @@ void info_collect_loop(void)
             {
                 can_buf_off_cnt = 0;
                 canfd_buf_off_flag = 1;
-                motor_ctrl.state = SOFT_STOP;
+                RunSignal = 0;
+                motor_ctrl.state = STOPPED;
             }
         }
         else
         {
             if((motor_ctrl.state == STOPPED) && canfd_buf_off_flag)
             {
-                EnableDrive();
-                motor_ctrl.state = MIT;
+                //RunSignal = 1;
+                motor_ctrl.state = INIT;
             }
             can_buf_off_cnt = 0;
             canfd_buf_off_flag = 0;
