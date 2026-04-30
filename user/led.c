@@ -20,15 +20,17 @@ const lpg_seg_t led_err_can_phy_off[]      = {{4,1},{5,0},{4,1},{5,0},{120,0}};
 const lpg_seg_t led_err_drv_over_temp[]    = {{4,1},{5,0},{4,1},{5,0},{30,0},{4,1},{5,0},{120,0}};
 const lpg_seg_t led_err_motor_over_temp[]  = {{4,1},{5,0},{4,1},{5,0},{30,0},{4,1},{5,0},{4,1},{5,0},{120,0}};
 const lpg_seg_t led_err_can_bus_off[]      = {{4,1},{5,0},{4,1},{5,0},{4,1},{5,0},{120,0}};
+const lpg_seg_t led_err_under_voltage[]    = {{4,1},{5,0},{4,1},{5,0},{4,1},{5,0},{30,0},{4,1},{5,0},{120,0}};
 
 typedef enum{
     LED_OFF,
     LED_ON,
     LED_ID_BLINK,
-    LED_ERR_CAN_PHY_OFF,        // 物理断线导致通信中断                    优先级 0 优先级最高
-    LED_ERR_DRV_OVER_TEMP,      // 驱动器过温                             优先级 1
-    LED_ERR_MOTOR_OVER_TEMP,    // 电机过温                               优先级 2
-    LED_ERR_CAN_BUS_OFF,        // 关节自身CANFD外设Bus-Off,主动挂出总线   优先级 3
+    LED_ERR_CAN_PHY_OFF,        // 物理断线导致通信中断                
+    LED_ERR_DRV_OVER_TEMP,      // 驱动器过温                            
+    LED_ERR_MOTOR_OVER_TEMP,    // 电机过温                          
+    LED_ERR_UNDER_VOLTAGE,      // 欠压    
+    LED_ERR_CAN_BUS_OFF,        // 关节自身CANFD外设Bus-Off,主动挂出总线   
 }led_state_t;
 
 led_state_t led_state = LED_OFF;
@@ -87,7 +89,7 @@ void led_loop(void)
     }
     else
     {
-        // 错误优先级 断线 > 驱动器过温 > 电机过温 > can_bus_off
+        // 错误优先级 断线 > 驱动器过温 > 电机过温 > 欠压 > can_bus_off
         if(canfd_frame_flag)
         {
             led_state = LED_ERR_CAN_PHY_OFF;
@@ -110,6 +112,14 @@ void led_loop(void)
             if(led_state != led_state_last)
             {
                 lpg_set_pattern(&lpg.units[0], led_err_motor_over_temp, ARRAY_SIZE(led_err_motor_over_temp));
+            }
+        }
+        else if(ODObjs.error_code & ERR_UNDER_VOLTAGE)
+        {
+            led_state = LED_ERR_UNDER_VOLTAGE;
+            if(led_state != led_state_last)
+            {
+                lpg_set_pattern(&lpg.units[0], led_err_under_voltage, ARRAY_SIZE(led_err_under_voltage));
             }
         }
         else if(canfd_buf_off_flag)

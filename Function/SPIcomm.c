@@ -48,7 +48,7 @@ void InitSpi(void)
     SpiaRegs.SPICTL.bit.MASTER_SLAVE = 1;//SPI 被配置为主控制器
     SpiaRegs.SPICTL.bit.CLK_PHASE = 0;//标准的SPICLK 信号，其极性由CLOCK POLARITY 位决定
     SpiaRegs.SPICTL.bit.OVERRUNINTENA =0;//禁止RECEIVER OVERRUN Flag 位产生的中断
-    SpiaRegs.SPIBRR = 5; // 目前是 100/6 = 16.7Mhz 的spi时钟频率
+    SpiaRegs.SPIBRR = 9; // 目前是 100/6 = 16.7Mhz 的spi时钟频率
     SpiaRegs.SPICCR.bit.SPISWRESET =1;
     EDIS;
 
