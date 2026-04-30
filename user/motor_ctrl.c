@@ -213,6 +213,8 @@ void clr_err(tErrorCode err)
     }
 }
 
+float under_v_level = 20.0f;
+
 float board_temp;
 float motor_temp;
 
@@ -358,6 +360,16 @@ void info_collect_loop(void)
             can_buf_off_cnt = 0;
             canfd_buf_off_flag = 0;
         }
+    }
+
+    // ÅÐ¶ÏÇ·Ñ¹
+    if((gUDC.uDCBigFilter * 0.1f) < under_v_level)
+    {
+        set_err(ERR_UNDER_VOLTAGE);
+    }
+    if((ODObjs.error_code & ERR_UNDER_VOLTAGE) && ((gUDC.uDCBigFilter * 0.1f) > under_v_level)) 
+    {
+        clr_err(ERR_UNDER_VOLTAGE);
     }
 
     /* -------- ÐÄÌøÖ¡ -------- */
